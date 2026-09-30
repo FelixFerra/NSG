@@ -2,7 +2,7 @@
 
 Tectonic hackathon, défi SD Worx : **« Unlock the Knowledge Within : Find it. Understand it. Trust it. »**
 
-Un consultant paie doit répondre vite à un client. Sa recherche remonte plusieurs documents : une note juridique récente, un vieux fichier sans auteur, une règle valable pour un autre pays, et un message Teams qui dit autre chose. Lequel croire ?
+Un consultant doit répondre vite à un client. Sa recherche remonte plusieurs documents : une note juridique récente, un vieux fichier sans auteur, une règle valable pour un autre pays, et un message Teams qui dit autre chose. Lequel croire ?
 
 **SD Worx Data Trust ne se contente pas de trouver l'information : il montre pourquoi on peut s'y fier ou non, signale les contradictions au lieu de les cacher, et fait trancher les humains qui savent.** Rien n'est une boîte noire : chaque point du score de confiance est expliqué à l'écran.
 
