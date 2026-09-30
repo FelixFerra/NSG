@@ -8,8 +8,8 @@ import type { Conflict, InfoWithRelations } from "@/lib/types";
 import { Badge, Card, formatDateTime } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { TrustPills } from "@/components/trust-pills";
-import { NOTIFICATION_TITLES } from "@/components/notification-row";
-import { markNotificationDone, resolveConflict } from "../../actions";
+import { KIND_META } from "@/lib/inbox";
+import { markNotificationDone, resolveConflictFromInbox } from "../../actions";
 import { AnswerForm } from "./answer-form";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -67,14 +67,14 @@ export default async function NotificationPage(props: PageProps<"/inbox/[id]">) 
   })}`;
 
   return (
-    <div className="max-w-4xl">
-      <Link href="/inbox" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
+    <div className="mx-auto max-w-4xl p-4 md:p-8">
+      <Link href="/inbox" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900 md:hidden">
         <ArrowLeft className="h-4 w-4" /> Boîte de réception
       </Link>
 
       <Card>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-lg font-semibold">{NOTIFICATION_TITLES[item.kind]}</h1>
+          <h1 className="text-lg font-semibold">{KIND_META[item.kind].label}</h1>
           <Badge tone={isOpen ? "warn" : "good"}>{isOpen ? "À traiter" : "Traité"}</Badge>
           {client && <Badge tone="info">{client.name}</Badge>}
           {context && <Badge>{context.label}</Badge>}
@@ -102,7 +102,7 @@ export default async function NotificationPage(props: PageProps<"/inbox/[id]">) 
               Vue comparée complète <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 xl:grid-cols-2">
             <Side label="A · Original" info={original} other={challenger} />
             <Side label="B · Nouvelle info" info={challenger} other={original} />
           </div>
@@ -112,14 +112,14 @@ export default async function NotificationPage(props: PageProps<"/inbox/[id]">) 
               <p className="text-sm text-slate-600">Ce conflit a déjà été tranché.</p>
             ) : canResolve.data === true ? (
               <div className="flex flex-col gap-3 sm:flex-row">
-                <form action={resolveConflict} className="flex-1">
+                <form action={resolveConflictFromInbox} className="flex-1">
                   <input type="hidden" name="conflict_id" value={conflict.id} />
                   <input type="hidden" name="decision" value="accept" />
                   <SubmitButton variant="success" className="w-full">
                     <Check className="h-4 w-4" /> Valider B : elle remplace A
                   </SubmitButton>
                 </form>
-                <form action={resolveConflict} className="flex-1">
+                <form action={resolveConflictFromInbox} className="flex-1">
                   <input type="hidden" name="conflict_id" value={conflict.id} />
                   <input type="hidden" name="decision" value="reject" />
                   <SubmitButton variant="secondary" className="w-full">

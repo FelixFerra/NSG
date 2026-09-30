@@ -85,6 +85,24 @@ export async function answerHandoff(_prev: ActionState, formData: FormData): Pro
   redirect("/inbox?done=1");
 }
 
+/** Après une décision prise depuis la boîte : on revient à la liste. */
+export async function resolveConflictFromInbox(formData: FormData) {
+  await resolveConflict(formData);
+  redirect("/inbox");
+}
+
+export async function markAllNotificationsRead() {
+  const { supabase, employee } = await getCurrentEmployee();
+  if (!employee) return;
+  // RLS : ne touche que les notifications de l'utilisateur
+  await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("recipient_id", employee.id)
+    .is("read_at", null);
+  revalidatePath("/", "layout");
+}
+
 export async function markNotificationDone(formData: FormData) {
   const id = uuidField(formData, "notification_id");
   if (!id) return;

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { ShieldCheck, LogOut } from "lucide-react";
 import { getCurrentEmployee } from "@/lib/supabase/server";
 import { fetchNotifications } from "@/lib/data";
-import { NotificationCenter } from "@/components/notification-center";
 import { logout } from "../(auth)/actions";
 import { NavLinks } from "./nav-links";
 
@@ -33,9 +32,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-end gap-3 px-4 pt-4 md:px-10">
-          <NotificationCenter items={notifications.filter((n) => !n.read_at || n.status === "open").slice(0, 12)} />
-          <form action={logout} className="md:hidden">
+        <header className="flex items-center justify-end gap-3 px-4 pt-4 md:hidden">
+          <form action={logout}>
             <button aria-label="Se déconnecter" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
               <LogOut className="h-4 w-4" />
             </button>
