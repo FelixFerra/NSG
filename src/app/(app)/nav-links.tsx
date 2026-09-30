@@ -11,7 +11,7 @@ const LINKS = [
   { href: "/knowledge", label: "Documents", icon: BookOpenCheck },
   { href: "/conflicts", label: "Conflits", icon: Scale },
   { href: "/clients", label: "Clients", icon: Building2 },
-  { href: "/team", label: "Experts", icon: Users },
+  { href: "/team", label: "Collaborateurs", icon: Users },
   { href: "/sources", label: "Sources connectées", icon: Plug },
 ];
 

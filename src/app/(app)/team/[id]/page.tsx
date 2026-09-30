@@ -36,7 +36,7 @@ export default async function ExpertProfilePage(props: PageProps<"/team/[id]">) 
   return (
     <div className="max-w-5xl">
       <Link href="/team" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
-        <ArrowLeft className="h-4 w-4" /> Tous les experts
+        <ArrowLeft className="h-4 w-4" /> Tous les collaborateurs
       </Link>
 
       <Card>

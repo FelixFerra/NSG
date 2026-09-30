@@ -18,7 +18,7 @@ export default async function TeamPage() {
   return (
     <>
       <PageHeader
-        title="Experts"
+        title="Collaborateurs"
         subtitle="Score de compétence par domaine : chaque conflit tranché rapporte +1 sur le sujet."
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
