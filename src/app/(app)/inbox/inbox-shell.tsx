@@ -3,28 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Inbox, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import type { NotificationItem } from "@/lib/data";
-import { KIND_META } from "@/lib/inbox";
+import { KIND_META, describeNotification } from "@/lib/inbox";
 import { markAllNotificationsRead } from "../actions";
 
 type Kind = NotificationItem["kind"];
 
-/** À traiter = une action est attendue ; une simple réponse non lue compte aussi. */
+/** À traiter = une action est attendue ; une réponse non lue compte aussi. */
 function needsAttention(n: NotificationItem, seen: boolean) {
   if (n.kind === "resolution") return !n.read_at && !seen;
   return n.status === "open";
-}
-
-function dayGroup(iso: string) {
-  const d = new Date(iso);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diff = Math.floor((today.getTime() - new Date(d).setHours(0, 0, 0, 0)) / 86_400_000);
-  if (diff <= 0) return "Aujourd'hui";
-  if (diff === 1) return "Hier";
-  if (diff < 7) return "Cette semaine";
-  return "Plus ancien";
 }
 
 function shortTime(iso: string) {
@@ -49,169 +38,119 @@ export function InboxShell({
   const [tab, setTab] = useState<"todo" | "done">("todo");
   const [kind, setKind] = useState<Kind | "all">("all");
   const [query, setQuery] = useState("");
-  // Éléments ouverts pendant la session : considérés comme lus sans recharger la liste
+  // Éléments ouverts pendant la session : lus sans recharger la liste
   const [seen, setSeen] = useState<Set<string>>(new Set());
   if (selectedId && !seen.has(selectedId)) setSeen(new Set(seen).add(selectedId));
 
+  const names = { clients: clientNames, contexts: contextLabels };
   const isUnread = (n: NotificationItem) => !n.read_at && !seen.has(n.id);
-  const inTab = (n: NotificationItem) => (needsAttention(n, seen.has(n.id)) ? "todo" : "done") === tab;
 
-  const counts = useMemo(() => {
-    const byKind = { all: 0, review_request: 0, handoff: 0, resolution: 0 };
-    let todo = 0;
-    for (const n of items) {
-      if (needsAttention(n, seen.has(n.id))) {
-        todo++;
-        byKind.all++;
-        byKind[n.kind]++;
-      }
-    }
-    return { todo, done: items.length - todo, byKind };
-  }, [items, seen]);
-
+  const todoCount = useMemo(() => items.filter((n) => needsAttention(n, seen.has(n.id))).length, [items, seen]);
   const q = query.trim().toLowerCase();
   const visible = items
-    .filter(inTab)
+    .filter((n) => (needsAttention(n, seen.has(n.id)) ? "todo" : "done") === tab)
     .filter((n) => kind === "all" || n.kind === kind)
     .filter((n) => !q || `${n.message} ${n.sender?.full_name ?? ""}`.toLowerCase().includes(q));
 
-  const groups = new Map<string, NotificationItem[]>();
-  for (const n of visible) {
-    const g = dayGroup(n.created_at);
-    groups.set(g, [...(groups.get(g) ?? []), n]);
-  }
-  const unreadCount = items.filter(isUnread).length;
-
   return (
-    <div className="-mx-4 -my-4 flex min-h-[70vh] border-t border-slate-200 bg-white md:-mx-10 md:-my-6 md:h-screen md:border-t-0">
+    <div className="-mx-4 -my-4 flex min-h-[70vh] bg-white md:-mx-10 md:-my-6 md:h-screen">
       {/* Liste */}
-      <section className={`flex w-full flex-col border-r border-slate-200 md:w-96 md:shrink-0 ${selectedId ? "hidden md:flex" : "flex"}`}>
-        <div className="border-b border-slate-100 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="flex items-center gap-2 text-lg font-semibold">
-              <Inbox className="h-5 w-5 text-indigo-600" /> Boîte de réception
-            </h1>
-            {unreadCount > 0 && (
+      <section className={`w-full flex-col border-r border-slate-200 md:flex md:w-104 md:shrink-0 ${selectedId ? "hidden" : "flex"}`}>
+        <header className="border-b border-slate-200 px-5 pt-5">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold tracking-tight">Boîte de réception</h1>
+            {items.some(isUnread) && (
               <form action={markAllNotificationsRead}>
-                <button className="text-xs font-medium text-indigo-600 hover:underline">Tout marquer comme lu</button>
+                <button className="text-xs text-slate-500 hover:text-slate-900">Tout marquer comme lu</button>
               </form>
             )}
           </div>
 
-          <div className="mt-3 flex gap-1 rounded-lg bg-slate-100 p-1 text-sm">
+          <div className="mt-3 flex items-center gap-2">
+            <label className="relative flex-1">
+              <span className="sr-only">Rechercher</span>
+              <Search className="pointer-events-none absolute top-2 left-2.5 h-4 w-4 text-slate-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher"
+                className="w-full rounded-md bg-slate-100 py-1.5 pr-3 pl-8 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-indigo-200"
+              />
+            </label>
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value as Kind | "all")}
+              aria-label="Type"
+              className="rounded-md bg-slate-100 px-2 py-1.5 text-sm text-slate-700 outline-none"
+            >
+              <option value="all">Tout</option>
+              {(Object.keys(KIND_META) as Kind[]).map((k) => (
+                <option key={k} value={k}>{KIND_META[k].plural}</option>
+              ))}
+            </select>
+          </div>
+
+          <nav className="mt-3 flex gap-5 text-sm">
             {(["todo", "done"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`flex-1 rounded-md px-3 py-1.5 ${tab === t ? "bg-white font-medium shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+                className={`-mb-px border-b-2 pb-2.5 ${tab === t ? "border-indigo-600 font-medium text-slate-900" : "border-transparent text-slate-500 hover:text-slate-800"}`}
               >
-                {t === "todo" ? `À traiter (${counts.todo})` : `Traité (${counts.done})`}
+                {t === "todo" ? "À traiter" : "Traité"}
+                {t === "todo" && todoCount > 0 && (
+                  <span className="ml-1.5 rounded-full bg-indigo-600 px-1.5 py-0.5 text-[11px] font-semibold text-white">{todoCount}</span>
+                )}
               </button>
             ))}
-          </div>
+          </nav>
+        </header>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            <Chip active={kind === "all"} onClick={() => setKind("all")} label="Tout" count={tab === "todo" ? counts.byKind.all : undefined} />
-            {(Object.keys(KIND_META) as Kind[]).map((k) => (
-              <Chip
-                key={k}
-                active={kind === k}
-                onClick={() => setKind(k)}
-                label={KIND_META[k].plural}
-                count={tab === "todo" ? counts.byKind[k] : undefined}
-              />
-            ))}
-          </div>
-
-          <label className="relative mt-3 block">
-            <span className="sr-only">Rechercher dans la boîte</span>
-            <Search className="pointer-events-none absolute top-2 left-2.5 h-4 w-4 text-slate-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher…"
-              className="w-full rounded-md border border-slate-200 py-1.5 pr-3 pl-8 text-sm outline-none focus:border-indigo-400"
-            />
-          </label>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {visible.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-slate-500">
-              {tab === "todo" ? "Rien à traiter. Bravo !" : "Aucun élément."}
-            </p>
-          ) : (
-            [...groups.entries()].map(([group, list]) => (
-              <div key={group}>
-                <p className="sticky top-0 bg-slate-50/95 px-4 py-1.5 text-[11px] font-semibold tracking-wide text-slate-500 uppercase backdrop-blur">
-                  {group}
-                </p>
-                <ul>
-                  {list.map((n) => {
-                    const meta = KIND_META[n.kind];
-                    const Icon = meta.icon;
-                    const unread = isUnread(n);
-                    const tags = [n.client_id && clientNames[n.client_id], n.context_id && contextLabels[n.context_id]].filter(Boolean);
-                    return (
-                      <li key={n.id}>
-                        <Link
-                          href={`/inbox/${n.id}`}
-                          className={`flex gap-3 border-b border-slate-100 px-4 py-3 ${
-                            n.id === selectedId ? "bg-indigo-50" : "hover:bg-slate-50"
-                          }`}
-                        >
-                          <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${meta.color}`}>
-                            <Icon className="h-4 w-4" />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <p className={`truncate text-sm ${unread ? "font-semibold text-slate-900" : "text-slate-700"}`}>
-                                {n.sender?.full_name ?? "Système"}
-                              </p>
-                              <span className="shrink-0 text-xs text-slate-400">{shortTime(n.created_at)}</span>
-                            </div>
-                            <p className={`text-xs ${unread ? "font-medium text-slate-700" : "text-slate-500"}`}>{meta.label}</p>
-                            <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">{n.message}</p>
-                            {tags.length > 0 && (
-                              <p className="mt-1 flex flex-wrap gap-1">
-                                {tags.map((t) => (
-                                  <span key={t as string} className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">
-                                    {t}
-                                  </span>
-                                ))}
-                              </p>
-                            )}
-                          </div>
-                          {unread && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-indigo-500" aria-label="Non lu" />}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))
+        <ul className="flex-1 overflow-y-auto">
+          {visible.length === 0 && (
+            <li className="px-6 py-16 text-center">
+              <p className="font-medium text-slate-700">{tab === "todo" ? "Tout est traité" : "Rien ici"}</p>
+              <p className="mt-1 text-sm text-slate-500">
+                {tab === "todo" ? "Les validations et questions qui te concernent arriveront ici." : "Les éléments traités apparaîtront ici."}
+              </p>
+            </li>
           )}
-        </div>
+          {visible.map((n) => {
+            const meta = KIND_META[n.kind];
+            const { subject, preview } = describeNotification(n, names);
+            const unread = isUnread(n);
+            const selected = n.id === selectedId;
+            return (
+              <li key={n.id}>
+                <Link
+                  href={`/inbox/${n.id}`}
+                  className={`block border-b border-l-4 border-b-slate-100 px-4 py-3 ${
+                    tab === "todo" ? meta.bar : "border-l-transparent"
+                  } ${selected ? "bg-indigo-50" : "hover:bg-slate-50"}`}
+                >
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className={`font-medium ${meta.text}`}>{meta.label}</span>
+                    <span className="text-slate-400">{shortTime(n.created_at)}</span>
+                  </div>
+                  <p className={`mt-0.5 flex items-center gap-2 text-sm ${unread ? "font-semibold text-slate-900" : "text-slate-800"}`}>
+                    <span className="truncate">{subject}</span>
+                    {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-indigo-600" aria-label="Non lu" />}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-slate-500">
+                    {n.sender?.full_name ? <span className="text-slate-600">{n.sender.full_name} — </span> : null}
+                    {preview}
+                  </p>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       {/* Détail */}
-      <section className={`min-w-0 flex-1 overflow-y-auto bg-slate-50 ${selectedId ? "block" : "hidden md:block"}`}>
+      <section className={`min-w-0 flex-1 overflow-y-auto bg-slate-50 md:block ${selectedId ? "block" : "hidden"}`}>
         {children}
       </section>
     </div>
-  );
-}
-
-function Chip({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${
-        active ? "border-indigo-300 bg-indigo-50 font-medium text-indigo-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"
-      }`}
-    >
-      {label}
-      {count !== undefined && count > 0 && <span className="rounded-full bg-red-600 px-1.5 text-[10px] font-semibold text-white">{count}</span>}
-    </button>
   );
 }
