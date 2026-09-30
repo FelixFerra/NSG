@@ -56,13 +56,13 @@ export function TrustFactors({ trust }: { trust: TrustResult }) {
   return (
     <ul className="space-y-2.5">
       {trust.factors.map((f) => (
-        <li key={f.label} className="grid grid-cols-[6.5rem_1fr_3.5rem] items-center gap-3 text-sm">
+        <li key={f.label} className="grid grid-cols-[6.5rem_1fr_3.5rem] items-start gap-3 text-sm">
           <span className="font-medium text-slate-700">{f.label}</span>
-          <div className="min-w-0">
+          <div className="min-w-0 pt-1.5">
             <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
               <div className={`h-full rounded-full ${TONE_BAR[f.tone]}`} style={{ width: `${(f.points / f.max) * 100}%` }} />
             </div>
-            <p className="mt-1 truncate text-xs text-slate-500">{f.detail}</p>
+            <p className="mt-1 text-xs text-slate-500">{f.detail}</p>
           </div>
           <span className="text-right text-xs tabular-nums text-slate-500">
             {f.points}/{f.max}

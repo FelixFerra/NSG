@@ -38,19 +38,6 @@ export async function requestExpertHelp(_prev: ActionState, formData: FormData):
   return { ok: true };
 }
 
-/** Valider (accept) ou rejeter (reject) l'info qui conteste l'original. */
-export async function resolveConflict(formData: FormData) {
-  const conflictId = uuidField(formData, "conflict_id");
-  const decision = formData.get("decision");
-  if (!conflictId || (decision !== "accept" && decision !== "reject")) return;
-
-  const { supabase } = await getCurrentEmployee();
-  // L'autorisation est vérifiée en base (resolve_conflict).
-  await supabase.rpc("resolve_conflict", { p_conflict_id: conflictId, p_decision: decision });
-
-  revalidatePath("/", "layout");
-}
-
 /** Répondre à une demande d'aide ; option : ajouter la réponse à la base de savoir. */
 export async function answerHandoff(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const notificationId = uuidField(formData, "notification_id");
@@ -95,12 +82,6 @@ export async function resolveConflictGroup(formData: FormData) {
   await supabase.rpc("resolve_conflict_group", { p_conflict_id: conflictId, p_winner_info_id: winnerId });
 
   revalidatePath("/", "layout");
-}
-
-/** Après une décision prise depuis la boîte : on revient à la liste. */
-export async function resolveConflictGroupFromInbox(formData: FormData) {
-  await resolveConflictGroup(formData);
-  redirect("/inbox");
 }
 
 export async function markAllNotificationsRead() {

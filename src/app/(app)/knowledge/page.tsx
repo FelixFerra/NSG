@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, ChevronRight, Pencil, Plus, Search } from "lucide-react";
 import { DeleteInfoButton } from "./delete-info-button";
-import { ClickableRow } from "@/components/clickable-row";
+import { ExpandableRow } from "@/components/expandable-row";
 import { getCurrentEmployee } from "@/lib/supabase/server";
 import { buildConflictIndex, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
 import { computeTrust } from "@/lib/trust";
@@ -124,13 +124,16 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
                 const inactive = info.status !== "active" || !!info.superseded_by;
                 const mine = !!employee && info.employee_id === employee.id;
                 return (
-                  <ClickableRow key={info.id} className={`align-top ${inactive ? "bg-slate-50/60 text-slate-400" : ""}`}>
-                    <td className="px-4 py-3">
-                      <details className="group">
-                        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                  <ExpandableRow
+                    key={info.id}
+                    colSpan={5}
+                    className={`align-top ${inactive ? "text-slate-400" : ""}`}
+                    cells={
+                      <>
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" />
-                            <span className={`truncate font-medium ${inactive ? "line-through decoration-slate-300" : "text-slate-900 group-open:text-indigo-700"}`}>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition group-aria-expanded:rotate-90" />
+                            <span className={`truncate font-medium ${inactive ? "line-through decoration-slate-300" : "text-slate-900 group-aria-expanded:text-indigo-700"}`}>
                               {info.title}
                             </span>
                             {infoConflicts.length > 0 && (
@@ -143,65 +146,72 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
                           <p className="mt-0.5 truncate pl-6 text-xs text-slate-500">
                             {[info.context?.label, info.client?.name ?? (info.country ? `Général · ${info.country}` : "Général")].filter(Boolean).join(" · ")}
                           </p>
-                        </summary>
-
-                        <div className="mt-3 grid gap-4 rounded-lg border border-slate-200 bg-white p-4 lg:grid-cols-[1fr_20rem]">
-                          <div className="min-w-0 space-y-3">
+                        </td>
+                        <td className="px-4 py-3">
+                          <ScoreBadge trust={trust} />
+                        </td>
+                        <td className="hidden px-4 py-3 xl:table-cell">
+                          <span className="inline-flex items-center gap-1.5">
+                            <ConnectorLogo id={info.source_type} size="xs" /> {sourceName(info.source_type)}
+                          </span>
+                        </td>
+                        <td className="hidden truncate px-4 py-3 lg:table-cell">
+                          {info.owner ? (
+                            <Link href={`/team/${info.owner.id}`} className="hover:text-indigo-700 hover:underline">{info.owner.full_name}</Link>
+                          ) : (
+                            <span className="text-red-600">Sans auteur</span>
+                          )}
+                        </td>
+                        <td className="hidden px-4 py-3 whitespace-nowrap sm:table-cell">{formatDate(info.source_updated_at)}</td>
+                      </>
+                    }
+                    detail={
+                      <div className="grid gap-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-2">
+                        <div className="min-w-0 space-y-4">
+                          <div>
+                            <p className="mb-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">Contenu</p>
                             <p className="leading-relaxed text-slate-800">{info.content}</p>
+                          </div>
+                          <div>
+                            <p className="mb-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">Preuves de fiabilité</p>
                             <TrustPills info={info} conflicts={infoConflicts.length} />
-                            {infoConflicts.length > 0 && (
-                              <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
-                                <p className="font-medium">Contredite par :</p>
-                                <ul className="mt-1 space-y-0.5">
-                                  {infoConflicts.map(({ conflict, other }) => (
-                                    <li key={conflict.id}>
-                                      <Link href={`/conflicts/${conflict.id}`} className="underline hover:text-red-950">
-                                        {other.title}
-                                      </Link>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            {mine && (
-                              <div className="flex flex-wrap items-center gap-2 pt-1">
-                                <Link
-                                  href={`/knowledge/${info.id}/edit`}
-                                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                                >
-                                  <Pencil className="h-3.5 w-3.5" /> Modifier
-                                </Link>
-                                <DeleteInfoButton infoId={info.id} title={info.title} compact />
-                              </div>
-                            )}
                           </div>
-                          <div className="rounded-md bg-slate-50 p-3">
-                            <p className="mb-2.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">Détail du score</p>
-                            <TrustFactors trust={trust} />
-                          </div>
+                          {infoConflicts.length > 0 && (
+                            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+                              <p className="font-medium">Contredite par :</p>
+                              <ul className="mt-1 space-y-0.5">
+                                {infoConflicts.map(({ conflict, other }) => (
+                                  <li key={conflict.id}>
+                                    <Link href={`/conflicts/${conflict.id}`} className="underline hover:text-red-950">
+                                      {other.title}
+                                    </Link>{" "}
+                                    <span className="text-red-600">({other.owner?.full_name ?? "sans auteur"})</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {mine && (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Link
+                                href={`/knowledge/${info.id}/edit`}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                              >
+                                <Pencil className="h-3.5 w-3.5" /> Modifier
+                              </Link>
+                              <DeleteInfoButton infoId={info.id} title={info.title} compact />
+                            </div>
+                          )}
                         </div>
-                      </details>
-                    </td>
-                    <td className="px-4 py-3">
-                      <ScoreBadge trust={trust} />
-                    </td>
-                    <td className="hidden px-4 py-3 xl:table-cell">
-                      <span className="inline-flex items-center gap-1.5">
-                        <ConnectorLogo id={info.source_type} size="xs" /> {sourceName(info.source_type)}
-                      </span>
-                    </td>
-                    <td className="hidden truncate px-4 py-3 lg:table-cell">
-                      {info.owner ? (
-                        <Link href={`/team/${info.owner.id}`} className="hover:text-indigo-700 hover:underline">{info.owner.full_name}</Link>
-                      ) : (
-                        <span className="text-red-600">Sans auteur</span>
-                      )}
-                    </td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap sm:table-cell">{formatDate(info.source_updated_at)}</td>
-                  </ClickableRow>
+                        <div className="rounded-lg bg-slate-50 p-4">
+                          <p className="mb-3 text-xs font-semibold tracking-wide text-slate-500 uppercase">Détail du score</p>
+                          <TrustFactors trust={trust} />
+                        </div>
+                      </div>
+                    }
+                  />
                 );
-              })}
-            </tbody>
+              })}            </tbody>
           </table>
         </div>
       )}

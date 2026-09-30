@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { Send } from "lucide-react";
 import type { Context } from "@/lib/types";
-import { answerHandoff, type ActionState } from "../../actions";
+import { answerHandoff, type ActionState } from "../actions";
 
 const input =
   "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
