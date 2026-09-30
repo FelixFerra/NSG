@@ -23,7 +23,7 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   // Message générique : ne pas révéler si le compte existe.
   if (error) return { error: "Identifiants incorrects ou e-mail non confirmé." };
 
-  redirect("/dashboard");
+  redirect("/search");
 }
 
 export async function signup(_prev: AuthState, formData: FormData): Promise<AuthState> {

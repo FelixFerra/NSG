@@ -13,12 +13,17 @@ const LOGOS: Record<SourceType, { icon: typeof Mail; color: string }> = {
   manual:       { icon: FileText,       color: "bg-slate-100 text-slate-600" },
 };
 
-export function ConnectorLogo({ id, size = "md" }: { id: SourceType; size?: "sm" | "md" }) {
+const SIZES = {
+  xs: { box: "h-5 w-5 rounded-full", glyph: "h-3 w-3" },
+  sm: { box: "h-7 w-7 rounded-lg", glyph: "h-3.5 w-3.5" },
+  md: { box: "h-10 w-10 rounded-lg", glyph: "h-5 w-5" },
+};
+
+export function ConnectorLogo({ id, size = "md" }: { id: SourceType; size?: keyof typeof SIZES }) {
   const { icon: Icon, color } = LOGOS[id];
-  const box = size === "sm" ? "h-7 w-7" : "h-10 w-10";
-  const glyph = size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5";
+  const { box, glyph } = SIZES[size];
   return (
-    <span className={`flex shrink-0 items-center justify-center rounded-lg ${box} ${color}`}>
+    <span className={`flex shrink-0 items-center justify-center ${box} ${color}`}>
       <Icon className={glyph} />
     </span>
   );

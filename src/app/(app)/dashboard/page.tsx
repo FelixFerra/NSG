@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, AlertTriangle, UserX, Clock, Plug } from "lucide-react";
+import { ArrowRight, AlertTriangle, UserX, Clock, Plug, Search } from "lucide-react";
 import { getCurrentEmployee } from "@/lib/supabase/server";
-import { fetchInfos, fetchReferenceData } from "@/lib/data";
+import { buildConflictIndex, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
 import { computeTrust } from "@/lib/trust";
 import { CONNECTORS } from "@/lib/connectors";
 import type { DataSource } from "@/lib/types";
@@ -10,47 +10,53 @@ import { ConnectorLogo } from "@/components/connector-logo";
 
 export default async function DashboardPage() {
   const { supabase, employee } = await getCurrentEmployee();
-  const [infos, { clients, employees }, sourcesRes] = await Promise.all([
+  const [infos, conflicts, { clients, employees }, sourcesRes] = await Promise.all([
     fetchInfos(supabase),
+    fetchConflicts(supabase),
     fetchReferenceData(supabase),
     employee
       ? supabase.from("data_sources").select("*").eq("employee_id", employee.id).eq("status", "connected")
       : Promise.resolve({ data: [] }),
   ]);
   const connected = (sourcesRes.data ?? []) as DataSource[];
+  const index = buildConflictIndex(conflicts, infos);
 
-  const scored = infos.map((info) => ({ info, trust: computeTrust(info, infos) }));
-  const withConflicts = scored.filter((s) => s.trust.conflicts.length > 0).length;
-  const noOwner = infos.filter((i) => !i.employee_id).length;
-  const stale = scored.filter((s) => s.trust.factors[0].tone === "bad").length;
-  const avg = scored.length ? Math.round(scored.reduce((s, x) => s + x.trust.score, 0) / scored.length) : 0;
+  const active = infos.filter((i) => i.status === "active");
+  const scored = active.map((info) => computeTrust(info, (index.get(info.id) ?? []).map((c) => c.other), info.country));
+  const pending = conflicts.filter((c) => c.status === "pending");
+  const mine = pending.filter((c) => c.assignee_id === employee?.id).length;
+  const resolved = conflicts.filter((c) => c.status === "accepted" || c.status === "rejected").length;
+  const noOwner = active.filter((i) => !i.employee_id).length;
+  const stale = scored.filter((t) => t.factors[0].tone === "bad").length;
+  const avg = scored.length ? Math.round(scored.reduce((s, t) => s + t.score, 0) / scored.length) : 0;
 
   const firstName = employee?.full_name.split(" ")[0];
 
   return (
     <>
-      <PageHeader
-        title={`Bonjour${firstName ? ` ${firstName}` : ""}`}
-        subtitle="Vue d'ensemble de la fiabilité du savoir interne."
-      />
+      <PageHeader title={`Bonjour${firstName ? ` ${firstName}` : ""}`} subtitle="Santé de la base de savoir.">
+        <Link href="/search" className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500">
+          <Search className="h-4 w-4" /> Poser une question
+        </Link>
+      </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Infos indexées" value={infos.length} hint={`${clients.length} clients · ${employees.length} employés`} />
-        <Stat label="Confiance moyenne" value={`${avg}/100`} hint="Score explicable, voir la base de savoir" />
+        <Stat label="Infos actives" value={active.length} hint={`${clients.length} clients · ${employees.length} employés`} />
+        <Stat label="Confiance moyenne" value={`${avg}/100`} hint="Sur les infos actives" />
+        <Stat label="Conflits en attente" value={pending.length} hint={mine ? `dont ${mine} à toi de trancher` : `${resolved} déjà résolus`} tone={pending.length ? "bad" : undefined} />
         <Stat label="Sources connectées" value={`${connected.length}/${CONNECTORS.length}`} hint="Pour ton compte" />
-        <Stat label="Conflits détectés" value={withConflicts} hint="Infos contredites par une autre source" tone={withConflicts ? "bad" : undefined} />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card>
           <h2 className="mb-4 font-medium">Points d&apos;attention</h2>
           <ul className="space-y-3 text-sm">
-            <Alert icon={AlertTriangle} tone="text-red-600" count={withConflicts} label="infos en conflit avec une autre source" />
-            <Alert icon={UserX} tone="text-amber-600" count={noOwner} label="infos sans propriétaire identifié" />
-            <Alert icon={Clock} tone="text-amber-600" count={stale} label="infos périmées ou archivées" />
+            <Alert icon={AlertTriangle} tone="text-red-600" count={pending.length} label="contradictions en attente de validation" />
+            <Alert icon={UserX} tone="text-amber-600" count={noOwner} label="infos actives sans auteur identifié" />
+            <Alert icon={Clock} tone="text-amber-600" count={stale} label="infos actives périmées" />
           </ul>
-          <Link href="/knowledge" className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:underline">
-            Ouvrir la base de savoir <ArrowRight className="h-4 w-4" />
+          <Link href="/conflicts" className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:underline">
+            Voir les conflits <ArrowRight className="h-4 w-4" />
           </Link>
         </Card>
 

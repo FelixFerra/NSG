@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Plug, BookOpenCheck, Building2, Users } from "lucide-react";
+import { LayoutDashboard, Plug, BookOpenCheck, Building2, Users, Search, Scale } from "lucide-react";
 
 const LINKS = [
+  { href: "/search", label: "Rechercher", icon: Search },
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/knowledge", label: "Base de savoir", icon: BookOpenCheck },
-  { href: "/sources", label: "Sources connectées", icon: Plug },
-  { href: "/clients", label: "Clients", icon: Building2 },
+  { href: "/knowledge", label: "Documents", icon: BookOpenCheck },
+  { href: "/conflicts", label: "Conflits", icon: Scale },
   { href: "/team", label: "Experts", icon: Users },
+  { href: "/clients", label: "Clients", icon: Building2 },
+  { href: "/sources", label: "Sources connectées", icon: Plug },
 ];
 
 export function NavLinks() {

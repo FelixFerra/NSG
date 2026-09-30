@@ -6,7 +6,6 @@ export type Employee = {
   job_title: string | null;
   department: string | null;
   country: string | null;
-  expertise: string[];
   created_at: string;
 };
 
@@ -23,6 +22,7 @@ export type Context = {
   slug: string;
   label: string;
   description: string | null;
+  keywords: string[];
 };
 
 export type SourceType =
@@ -56,7 +56,10 @@ export type Info = {
   client_id: string | null;
   context_id: string | null;
   country: string | null;
-  status: "active" | "draft" | "archived";
+  status: "active" | "draft" | "archived" | "rejected";
+  is_official: boolean;
+  is_signed: boolean;
+  superseded_by: string | null;
   valid_until: string | null;
   source_updated_at: string;
 };
@@ -65,4 +68,35 @@ export type InfoWithRelations = Info & {
   owner: Pick<Employee, "id" | "full_name" | "job_title" | "email"> | null;
   client: Pick<Client, "id" | "name" | "country"> | null;
   context: Pick<Context, "id" | "label" | "slug"> | null;
+};
+
+export type Conflict = {
+  id: string;
+  context_id: string | null;
+  original_info_id: string;
+  challenger_info_id: string;
+  assignee_id: string | null;
+  status: "pending" | "accepted" | "rejected" | "obsolete";
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+};
+
+export type ExpertiseScore = {
+  employee_id: string;
+  context_id: string;
+  score: number;
+};
+
+export type Notification = {
+  id: string;
+  recipient_id: string;
+  sender_id: string | null;
+  kind: "review_request" | "handoff" | "resolution";
+  conflict_id: string | null;
+  client_id: string | null;
+  context_id: string | null;
+  message: string;
+  read_at: string | null;
+  created_at: string;
 };
