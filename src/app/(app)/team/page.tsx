@@ -1,4 +1,5 @@
-import { Mail } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { getCurrentEmployee } from "@/lib/supabase/server";
 import { authorityOf, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
 import { Badge, Card, PageHeader } from "@/components/ui";
@@ -34,9 +35,9 @@ export default async function TeamPage() {
                   {e.full_name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate font-medium">
+                  <Link href={`/team/${e.id}`} className="block truncate font-medium hover:text-indigo-700 hover:underline">
                     {e.full_name} {e.id === me?.id && <span className="text-xs text-slate-400">(toi)</span>}
-                  </p>
+                  </Link>
                   <p className="truncate text-xs text-slate-500">
                     {[e.job_title, e.department].filter(Boolean).join(" · ") || "—"}
                   </p>
@@ -70,9 +71,9 @@ export default async function TeamPage() {
                 <span className="text-slate-500">
                   {owned} info(s) · {resolvedCount} conflit(s) tranché(s)
                 </span>
-                <a href={`mailto:${e.email}`} className="flex items-center gap-1 text-indigo-600 hover:underline">
-                  <Mail className="h-3.5 w-3.5" /> Contacter
-                </a>
+                <Link href={`/team/${e.id}`} className="flex items-center gap-1 text-indigo-600 hover:underline">
+                  Voir le profil <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
             </Card>
           );

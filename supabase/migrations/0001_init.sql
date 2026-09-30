@@ -1,4 +1,4 @@
--- NSG Trust — schéma initial
+-- SD Worx Data Trust — schéma initial
 -- À exécuter dans Supabase > SQL Editor (ou `supabase db push`).
 
 create extension if not exists "pgcrypto";

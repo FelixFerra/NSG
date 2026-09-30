@@ -2,19 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Plug, BookOpenCheck, Building2, Users, Search, Scale } from "lucide-react";
+import { LayoutDashboard, Plug, BookOpenCheck, Building2, Users, Search, Scale, Inbox } from "lucide-react";
 
 const LINKS = [
   { href: "/search", label: "Rechercher", icon: Search },
+  { href: "/inbox", label: "Boîte de réception", icon: Inbox },
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/knowledge", label: "Documents", icon: BookOpenCheck },
   { href: "/conflicts", label: "Conflits", icon: Scale },
-  { href: "/team", label: "Experts", icon: Users },
   { href: "/clients", label: "Clients", icon: Building2 },
+  { href: "/team", label: "Experts", icon: Users },
   { href: "/sources", label: "Sources connectées", icon: Plug },
 ];
 
-export function NavLinks() {
+export function NavLinks({ inboxCount }: { inboxCount: number }) {
   const pathname = usePathname();
   return (
     <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:pb-0">
@@ -30,6 +31,9 @@ export function NavLinks() {
           >
             <Icon className="h-4 w-4" />
             {label}
+            {href === "/inbox" && inboxCount > 0 && (
+              <span className="ml-auto rounded-full bg-red-600 px-1.5 text-[11px] font-semibold text-white">{inboxCount}</span>
+            )}
           </Link>
         );
       })}

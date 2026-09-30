@@ -1,4 +1,4 @@
--- NSG Trust — conflits, validation par les pairs, graphe d'expertise
+-- SD Worx Data Trust — conflits, validation par les pairs, graphe d'expertise
 -- À exécuter après 0001_init.sql, puis relancer seed.sql.
 
 -- ---------------------------------------------------------------------------

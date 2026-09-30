@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { Mail, Send, Check } from "lucide-react";
 import { requestExpertHelp, type ActionState } from "@/app/(app)/actions";
@@ -13,6 +14,8 @@ export type ExpertCardProps = {
   handoffMessage: string;
   clientId?: string | null;
   contextId?: string | null;
+  /** Conflit transféré : l'expert pourra le trancher depuis sa notification. */
+  conflictId?: string | null;
   isMe?: boolean;
 };
 
@@ -35,7 +38,9 @@ export function ExpertCard(props: ExpertCardProps) {
           {initials}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{expert.full_name}</p>
+          <Link href={`/team/${expert.id}`} className="block truncate font-medium hover:text-indigo-700 hover:underline">
+            {expert.full_name}
+          </Link>
           <p className="truncate text-xs text-slate-500">
             {[expert.job_title, expert.country].filter(Boolean).join(" · ")}
           </p>
@@ -65,6 +70,7 @@ export function ExpertCard(props: ExpertCardProps) {
             <input type="hidden" name="message" value={props.handoffMessage} />
             {props.clientId && <input type="hidden" name="client_id" value={props.clientId} />}
             {props.contextId && <input type="hidden" name="context_id" value={props.contextId} />}
+            {props.conflictId && <input type="hidden" name="conflict_id" value={props.conflictId} />}
             <button
               disabled={pending || state.ok}
               className="flex w-full items-center justify-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-60"

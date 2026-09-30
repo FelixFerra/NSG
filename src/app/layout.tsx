@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NSG Trust",
+  title: "SD Worx Data Trust",
   description: "Trouver une info interne, la comprendre et savoir si on peut s'y fier.",
 };
 

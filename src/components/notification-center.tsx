@@ -1,21 +1,10 @@
 import Link from "next/link";
-import { Bell, Check, X, Scale, Send, CheckCheck } from "lucide-react";
-import type { Conflict, Notification } from "@/lib/types";
-import { markNotificationRead, resolveConflict } from "@/app/(app)/actions";
+import { Bell } from "lucide-react";
+import type { NotificationItem } from "@/lib/data";
 import { Popover } from "./popover";
-import { SubmitButton } from "./submit-button";
-import { formatDateTime } from "./ui";
+import { NotificationRow } from "./notification-row";
 
-type Item = Notification & { sender: { full_name: string } | null; conflict: Pick<Conflict, "id" | "status"> | null };
-
-const ICONS = { review_request: Scale, handoff: Send, resolution: CheckCheck };
-const TITLES = {
-  review_request: "Ton travail est remis en cause",
-  handoff: "Demande d'aide",
-  resolution: "Décision sur ta contribution",
-};
-
-export function NotificationCenter({ items }: { items: Item[] }) {
+export function NotificationCenter({ items }: { items: NotificationItem[] }) {
   const unread = items.filter((n) => !n.read_at).length;
 
   return (
@@ -33,60 +22,20 @@ export function NotificationCenter({ items }: { items: Item[] }) {
       }
     >
       <div className="border-b border-slate-100 px-4 py-3">
-        <p className="text-sm font-semibold">Demandes d&apos;examen</p>
-        <p className="text-xs text-slate-500">{unread ? `${unread} en attente` : "Tout est à jour"}</p>
+        <p className="text-sm font-semibold">Notifications</p>
+        <p className="text-xs text-slate-500">Clique pour traiter maintenant, ou retrouve-les plus tard dans ta boîte.</p>
       </div>
-      <ul className="max-h-[28rem] overflow-y-auto">
-        {items.length === 0 && <li className="px-4 py-6 text-center text-sm text-slate-500">Aucune notification.</li>}
-        {items.map((n) => {
-          const Icon = ICONS[n.kind];
-          const pendingReview = n.kind === "review_request" && n.conflict?.status === "pending";
-          return (
-            <li key={n.id} className={`border-b border-slate-100 px-4 py-3 last:border-0 ${n.read_at ? "opacity-60" : ""}`}>
-              <div className="flex gap-3">
-                <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${pendingReview ? "text-red-500" : "text-indigo-500"}`} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{TITLES[n.kind]}</p>
-                  <p className="mt-0.5 text-sm whitespace-pre-line text-slate-600">{n.message}</p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {n.sender?.full_name ? `${n.sender.full_name} · ` : ""}
-                    {formatDateTime(n.created_at)}
-                  </p>
-
-                  {pendingReview && n.conflict && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <form action={resolveConflict}>
-                        <input type="hidden" name="conflict_id" value={n.conflict.id} />
-                        <input type="hidden" name="decision" value="accept" />
-                        <SubmitButton variant="success" className="px-2.5 py-1 text-xs">
-                          <Check className="h-3.5 w-3.5" /> Valider
-                        </SubmitButton>
-                      </form>
-                      <form action={resolveConflict}>
-                        <input type="hidden" name="conflict_id" value={n.conflict.id} />
-                        <input type="hidden" name="decision" value="reject" />
-                        <SubmitButton variant="secondary" className="px-2.5 py-1 text-xs">
-                          <X className="h-3.5 w-3.5" /> Rejeter
-                        </SubmitButton>
-                      </form>
-                      <Link href={`/conflicts/${n.conflict.id}`} className="px-1 py-1 text-xs font-medium text-indigo-600 hover:underline">
-                        Comparer
-                      </Link>
-                    </div>
-                  )}
-
-                  {!n.read_at && !pendingReview && (
-                    <form action={markNotificationRead} className="mt-1">
-                      <input type="hidden" name="notification_id" value={n.id} />
-                      <button className="text-xs text-slate-500 hover:text-slate-900">Marquer comme lu</button>
-                    </form>
-                  )}
-                </div>
-              </div>
-            </li>
-          );
-        })}
+      <ul className="max-h-104 overflow-y-auto">
+        {items.length === 0 && <li className="px-4 py-6 text-center text-sm text-slate-500">Rien de nouveau.</li>}
+        {items.map((n) => (
+          <li key={n.id} className="border-b border-slate-100 last:border-0">
+            <NotificationRow item={n} compact />
+          </li>
+        ))}
       </ul>
+      <Link href="/inbox" className="block border-t border-slate-100 px-4 py-2.5 text-center text-sm font-medium text-indigo-600 hover:bg-slate-50">
+        Ouvrir la boîte de réception
+      </Link>
     </Popover>
   );
 }

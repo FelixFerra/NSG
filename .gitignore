@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# scripts SQL locaux (données personnelles)
+*.local.sql
+
 # vercel
 .vercel
 

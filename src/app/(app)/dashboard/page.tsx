@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, AlertTriangle, UserX, Clock, Plug, Search } from "lucide-react";
 import { getCurrentEmployee } from "@/lib/supabase/server";
-import { buildConflictIndex, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
+import { buildConflictIndex, fetchConflicts, fetchInfos, fetchNotifications } from "@/lib/data";
 import { computeTrust } from "@/lib/trust";
 import { CONNECTORS } from "@/lib/connectors";
 import type { DataSource } from "@/lib/types";
@@ -10,10 +10,10 @@ import { ConnectorLogo } from "@/components/connector-logo";
 
 export default async function DashboardPage() {
   const { supabase, employee } = await getCurrentEmployee();
-  const [infos, conflicts, { clients, employees }, sourcesRes] = await Promise.all([
+  const [infos, conflicts, notifications, sourcesRes] = await Promise.all([
     fetchInfos(supabase),
     fetchConflicts(supabase),
-    fetchReferenceData(supabase),
+    fetchNotifications(supabase),
     employee
       ? supabase.from("data_sources").select("*").eq("employee_id", employee.id).eq("status", "connected")
       : Promise.resolve({ data: [] }),
@@ -25,10 +25,9 @@ export default async function DashboardPage() {
   const scored = active.map((info) => computeTrust(info, (index.get(info.id) ?? []).map((c) => c.other), info.country));
   const pending = conflicts.filter((c) => c.status === "pending");
   const mine = pending.filter((c) => c.assignee_id === employee?.id).length;
-  const resolved = conflicts.filter((c) => c.status === "accepted" || c.status === "rejected").length;
+  const toHandle = notifications.filter((n) => n.status === "open" && n.kind !== "resolution").length;
   const noOwner = active.filter((i) => !i.employee_id).length;
   const stale = scored.filter((t) => t.factors[0].tone === "bad").length;
-  const avg = scored.length ? Math.round(scored.reduce((s, t) => s + t.score, 0) / scored.length) : 0;
 
   const firstName = employee?.full_name.split(" ")[0];
 
@@ -40,11 +39,13 @@ export default async function DashboardPage() {
         </Link>
       </PageHeader>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Infos actives" value={active.length} hint={`${clients.length} clients · ${employees.length} employés`} />
-        <Stat label="Confiance moyenne" value={`${avg}/100`} hint="Sur les infos actives" />
-        <Stat label="Conflits en attente" value={pending.length} hint={mine ? `dont ${mine} à toi de trancher` : `${resolved} déjà résolus`} tone={pending.length ? "bad" : undefined} />
-        <Stat label="Sources connectées" value={`${connected.length}/${CONNECTORS.length}`} hint="Pour ton compte" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link href="/inbox">
+          <Stat label="À traiter dans ta boîte" value={toHandle} hint={mine ? `dont ${mine} conflit(s) à trancher` : "Demandes de validation et questions reçues"} tone={toHandle ? "bad" : undefined} />
+        </Link>
+        <Link href="/sources">
+          <Stat label="Sources connectées" value={`${connected.length}/${CONNECTORS.length}`} hint="Pour ton compte" />
+        </Link>
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -87,7 +88,7 @@ export default async function DashboardPage() {
 
 function Stat({ label, value, hint, tone }: { label: string; value: string | number; hint: string; tone?: "bad" }) {
   return (
-    <Card>
+    <Card className="h-full transition hover:border-indigo-300">
       <p className="text-sm text-slate-500">{label}</p>
       <p className={`mt-1 text-2xl font-semibold ${tone === "bad" ? "text-red-600" : ""}`}>{value}</p>
       <p className="mt-1 text-xs text-slate-400">{hint}</p>

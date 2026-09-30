@@ -1,5 +1,5 @@
 -- Données de démo : scénario « consultant paie qui répond à un client ».
--- À exécuter après les migrations 0001 et 0002. Relançable : remet la démo à zéro
+-- À exécuter après les migrations 0001, 0002 et 0003. Relançable : remet la démo à zéro
 -- (les comptes utilisateurs et leurs sources connectées sont conservés).
 -- Les conflits et notifications sont générés automatiquement par le trigger sur infos.
 
@@ -30,10 +30,24 @@ on conflict (id) do update set
   full_name = excluded.full_name, job_title = excluded.job_title,
   department = excluded.department, country = excluded.country;
 
-insert into public.clients (id, name, country, sector, account_owner_id) values
-  ('a0000000-0000-0000-0000-000000000001', 'Brasserie Lambert', 'BE', 'Horeca (CP 302)', 'e0000000-0000-0000-0000-000000000004'),
-  ('a0000000-0000-0000-0000-000000000002', 'Nordwind GmbH',     'DE', 'Logistique',      'e0000000-0000-0000-0000-000000000002'),
-  ('a0000000-0000-0000-0000-000000000003', 'Café Lumière',      'FR', 'Restauration',    'e0000000-0000-0000-0000-000000000003');
+insert into public.clients (id, name, country, sector, account_owner_id, headcount, contact_name, contact_email, description) values
+  ('a0000000-0000-0000-0000-000000000001', 'Brasserie Lambert', 'BE', 'Horeca (CP 302)', 'e0000000-0000-0000-0000-000000000004',
+   85, 'Marc Lambert', 'rh@brasserie-lambert.example', 'Brasserie familiale, 3 établissements à Bruxelles. Accord d''entreprise spécifique sur l''indexation depuis 2026.'),
+  ('a0000000-0000-0000-0000-000000000002', 'Nordwind GmbH', 'DE', 'Logistique', 'e0000000-0000-0000-0000-000000000002',
+   420, 'Katrin Vogel', 'hr@nordwind.example', 'Transporteur routier, sièges à Hambourg et Brême. Nouvel accord collectif sur les congés.'),
+  ('a0000000-0000-0000-0000-000000000003', 'Café Lumière', 'FR', 'Restauration', 'e0000000-0000-0000-0000-000000000003',
+   32, 'Élodie Martin', 'contact@cafe-lumiere.example', 'Chaîne de cafés à Lyon, forte saisonnalité et nombreux contrats courts.');
+
+insert into public.client_issues (client_id, context_id, title, description, status, created_by, created_at) values
+  ('a0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001', 'Taux d''indexation à appliquer en janvier',
+   'Le client demande confirmation du taux avant la paie de janvier : 2,21 % (CP 302) ou 2,0 % (accord d''entreprise) ?',
+   'open', 'e0000000-0000-0000-0000-000000000004', now() - interval '2 days'),
+  ('a0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000003', 'Prorata prime de fin d''année pour les saisonniers',
+   'Comment calculer la prime pour les extras engagés pendant l''été ?', 'open', 'e0000000-0000-0000-0000-000000000004', now() - interval '9 days'),
+  ('a0000000-0000-0000-0000-000000000002', 'c0000000-0000-0000-0000-000000000002', 'Nombre de jours de congés 2026',
+   'Le RH annonce 30 jours, notre fiche indique 28. À clarifier avant la clôture.', 'open', 'e0000000-0000-0000-0000-000000000005', now() - interval '6 days'),
+  ('a0000000-0000-0000-0000-000000000003', 'c0000000-0000-0000-0000-000000000002', 'Congés des contrats courts',
+   'Calcul de l''indemnité compensatrice de congés payés pour les CDD de moins d''un mois.', 'resolved', 'e0000000-0000-0000-0000-000000000003', now() - interval '40 days');
 
 -- Graphe d'expertise (avant les infos : sert à choisir le validateur des infos sans auteur)
 insert into public.expertise_scores (employee_id, context_id, score) values

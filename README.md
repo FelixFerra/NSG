@@ -1,8 +1,8 @@
-# NSG Trust
+# SD Worx Data Trust
 
 Tectonic hackathon, défi SD Worx : **« Unlock the Knowledge Within : Find it. Understand it. Trust it. »**
 
-Un consultant paie doit répondre vite à un client. La recherche remonte plusieurs documents : un récent, un sans auteur, un pour un autre pays, et un message Teams qui dit autre chose. NSG Trust l'aide à savoir **à quelle réponse se fier, et pourquoi**.
+Un consultant paie doit répondre vite à un client. La recherche remonte plusieurs documents : un récent, un sans auteur, un pour un autre pays, et un message Teams qui dit autre chose. SD Worx Data Trust l'aide à savoir **à quelle réponse se fier, et pourquoi**.
 
 ## Fonctionnalités
 
@@ -12,6 +12,9 @@ Un consultant paie doit répondre vite à un client. La recherche remonte plusie
 - **Vue de résolution** : un écran scindé qui compare la source A et la source B. Le point exact de désaccord est surligné (`2.21%` contre `2.0%`), avec des boutons *Valider B* / *Rejeter B* pour les personnes autorisées.
 - **Validation par les pairs** : quand quelqu'un ajoute une info qui en contredit une autre, l'**auteur de l'info d'origine** est notifié (ou l'expert référent du sujet si elle n'a pas d'auteur). Il valide ou rejette depuis la cloche de notifications, en un clic. La base se nettoie ainsi d'elle-même.
 - **Graphe d'expertise** : chaque employé a un score par domaine, et chaque conflit tranché ajoute +1. Si une recherche échoue ou si un conflit reste ouvert, l'appli recommande les experts les mieux notés sur le sujet et permet de **leur transférer le contexte** (notification dans l'appli ou e-mail prérempli).
+- **Boîte de réception** : chaque demande (validation, question transférée) arrive en notification. Un clic l'ouvre pour la traiter tout de suite, sinon elle reste dans la boîte de réception pour plus tard. Un expert à qui on transfère un conflit peut le trancher directement. S'il s'agit d'une simple question, il répond, et peut ajouter sa réponse à la base de savoir.
+- **Profils d'experts** : on peut consulter le profil de chaque collègue (expertise par domaine, infos publiées, clients suivis, conflits tranchés) et lui poser une question.
+- **Fiches clients** : on peut créer un client et remplir son profil (contact, effectif, particularités). Sa fiche liste ses problèmes en cours et n'affiche que ses documents ; les règles générales de son pays sont dans une section à part. Les conflits qui le concernent y apparaissent aussi.
 - **Sources connectées** : Outlook, Gmail, Teams, Slack, SharePoint, OneDrive, Google Drive, Confluence. *La connexion est simulée.*
 
 ## Modèle de données
@@ -39,7 +42,8 @@ Un consultant paie doit répondre vite à un client. La recherche remonte plusie
 2. Dans **SQL Editor**, exécuter dans l'ordre :
    1. `supabase/migrations/0001_init.sql`
    2. `supabase/migrations/0002_trust_workflow.sql`
-   3. `supabase/seed.sql` (données de démo, relançable pour remettre la démo à zéro)
+   3. `supabase/migrations/0003_inbox_clients.sql`
+   4. `supabase/seed.sql` (données de démo, relançable pour remettre la démo à zéro)
 3. Pour la démo, désactiver la confirmation d'e-mail : *Authentication > Sign In / Providers > Email > Confirm email*.
 4. Configurer l'environnement puis lancer :
    ```bash

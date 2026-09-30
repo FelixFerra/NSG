@@ -43,7 +43,7 @@ export default async function SearchPage(props: PageProps<"/search">) {
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Pose ta question</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Choisis d&apos;abord le client : la réponse dépend de son pays et de ses accords.
+          Client, puis sujet, puis ta question : la réponse dépend du pays et des accords du client.
         </p>
       </div>
 
@@ -68,6 +68,17 @@ export default async function SearchPage(props: PageProps<"/search">) {
               ))}
             </select>
           </label>
+          <label className="md:w-52">
+            <span className="sr-only">Sujet</span>
+            <select name="context" defaultValue={contextId} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm">
+              <option value="">Sujet : détection auto</option>
+              {contexts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="relative flex-1">
             <span className="sr-only">Question</span>
             <Search className="pointer-events-none absolute top-3 left-3 h-4 w-4 text-slate-400" />
@@ -80,14 +91,6 @@ export default async function SearchPage(props: PageProps<"/search">) {
               className="w-full rounded-lg border border-slate-200 py-2.5 pr-3 pl-9 text-sm outline-none focus:border-indigo-500"
             />
           </label>
-          <select name="context" defaultValue={contextId} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm md:w-48">
-            <option value="">Sujet : auto</option>
-            {contexts.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
           <button className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-500">
             Rechercher
           </button>
@@ -277,6 +280,7 @@ function AnswerCard({
                 handoffMessage={handoff}
                 clientId={client.id}
                 contextId={main.info.context_id}
+                conflictId={answer.conflicts[0]?.conflict.id}
                 isMe={x.employee.id === meId}
               />
             ))}

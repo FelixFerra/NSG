@@ -15,6 +15,23 @@ export type Client = {
   country: string | null;
   sector: string | null;
   account_owner_id: string | null;
+  description: string | null;
+  headcount: number | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  created_at: string;
+};
+
+export type ClientIssue = {
+  id: string;
+  client_id: string;
+  context_id: string | null;
+  title: string;
+  description: string | null;
+  status: "open" | "resolved";
+  created_by: string | null;
+  created_at: string;
+  resolved_at: string | null;
 };
 
 export type Context = {
@@ -98,5 +115,6 @@ export type Notification = {
   context_id: string | null;
   message: string;
   read_at: string | null;
+  status: "open" | "done";
   created_at: string;
 };

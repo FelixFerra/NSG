@@ -1,6 +1,15 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Client, Conflict, Context, Employee, ExpertiseScore, InfoWithRelations } from "./types";
+import type {
+  Client,
+  ClientIssue,
+  Conflict,
+  Context,
+  Employee,
+  ExpertiseScore,
+  InfoWithRelations,
+  Notification,
+} from "./types";
 
 const INFO_SELECT =
   "*, owner:employees(id, full_name, job_title, email), client:clients(id, name, country), context:contexts(id, label, slug)";
@@ -27,6 +36,29 @@ export async function fetchReferenceData(supabase: SupabaseClient) {
     employees: (employees.data ?? []) as Employee[],
     expertise: (expertise.data ?? []) as ExpertiseScore[],
   };
+}
+
+export type NotificationItem = Notification & {
+  sender: Pick<Employee, "id" | "full_name"> | null;
+  conflict: Pick<Conflict, "id" | "status"> | null;
+};
+
+/** Notifications de l'utilisateur connecté (RLS), non lues et à traiter d'abord. */
+export async function fetchNotifications(supabase: SupabaseClient, options: { limit?: number } = {}) {
+  const { data } = await supabase
+    .from("notifications")
+    .select("*, sender:employees!notifications_sender_id_fkey(id, full_name), conflict:conflicts(id, status)")
+    .order("status", { ascending: false }) // 'open' avant 'done'
+    .order("created_at", { ascending: false })
+    .limit(options.limit ?? 100);
+  return (data ?? []) as NotificationItem[];
+}
+
+export async function fetchClientIssues(supabase: SupabaseClient, clientId?: string) {
+  let query = supabase.from("client_issues").select("*").order("created_at", { ascending: false });
+  if (clientId) query = query.eq("client_id", clientId);
+  const { data } = await query;
+  return (data ?? []) as ClientIssue[];
 }
 
 export async function fetchConflicts(supabase: SupabaseClient) {

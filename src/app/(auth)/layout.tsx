@@ -6,7 +6,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="w-full max-w-sm">
         <div className="mb-8 flex items-center justify-center gap-2 text-slate-900">
           <ShieldCheck className="h-7 w-7 text-indigo-600" />
-          <span className="text-xl font-semibold">NSG Trust</span>
+          <span className="text-xl font-semibold">SD Worx Data Trust</span>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">{children}</div>
         <p className="mt-6 text-center text-xs text-slate-400">

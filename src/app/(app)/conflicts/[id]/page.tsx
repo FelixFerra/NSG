@@ -130,6 +130,7 @@ export default async function ConflictPage(props: PageProps<"/conflicts/[id]">) 
                   topic={original.context?.label ?? null}
                   handoffMessage={`Peux-tu trancher la contradiction entre « ${original.title} » et « ${challenger.title} » ?`}
                   contextId={conflict.context_id}
+                  conflictId={conflict.id}
                   isMe={x.employee.id === employee?.id}
                 />
               ))}
