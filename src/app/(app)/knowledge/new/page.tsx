@@ -1,7 +1,7 @@
 import { getCurrentEmployee } from "@/lib/supabase/server";
 import { fetchReferenceData } from "@/lib/data";
 import { Card, PageHeader } from "@/components/ui";
-import { InfoForm } from "./info-form";
+import { InfoForm } from "../info-form";
 
 export default async function NewInfoPage() {
   const { supabase } = await getCurrentEmployee();

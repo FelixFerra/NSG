@@ -13,7 +13,7 @@ Un consultant paie doit répondre vite à un client. La recherche remonte plusie
 - **Boîte de réception** : elle regroupe les validations, les questions transférées par des collègues et les réponses reçues. On traite chaque demande tout de suite ou plus tard.
 - **Collaborateurs** : on voit le profil de chaque collègue (score d'expertise par domaine, infos publiées, clients suivis, conflits tranchés) et on peut lui poser une question.
 - **Clients** : on crée et on édite des fiches clients (profil, contact, problèmes en cours). Chaque fiche n'affiche que les documents et conflits du client ; les règles générales de son pays sont dans une section à part.
-- **Documents** : un tableau de toute la base, avec le score de chaque document ; un clic sur une ligne déplie le détail. On peut aussi ajouter une info.
+- **Documents** : un tableau de toute la base, avec le score de chaque document ; un clic sur une ligne déplie le détail. On peut ajouter une info, et **modifier ou supprimer celles dont on est l'auteur**. Une info modifiée voit ses contradictions réévaluées.
 - **Mon profil** : chacun modifie son nom, son poste, son service et son pays.
 - **Sources connectées** : Outlook, Gmail, Teams, Slack, SharePoint, OneDrive, Google Drive, Confluence. *La connexion est simulée.*
 
@@ -106,7 +106,8 @@ N'importe quel employé connecté peut trancher, en choisissant **la bonne versi
    3. `supabase/migrations/0003_inbox_clients.sql`
    4. `supabase/migrations/0004_open_conflict_resolution.sql`
    5. `supabase/migrations/0005_conflict_groups.sql`
-   6. `supabase/seed.sql` (données de démo, relançable pour remettre la démo à zéro)
+   6. `supabase/migrations/0006_edit_own_infos.sql`
+   7. `supabase/seed.sql` (données de démo, relançable pour remettre la démo à zéro)
 3. Pour la démo, désactiver la confirmation d'e-mail : *Authentication > Sign In / Providers > Email > Confirm email*.
 4. Configurer l'environnement puis lancer :
    ```bash

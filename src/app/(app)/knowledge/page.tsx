@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AlertTriangle, Plus, Search } from "lucide-react";
+import { AlertTriangle, Pencil, Plus, Search } from "lucide-react";
+import { DeleteInfoButton } from "./delete-info-button";
 import { ClickableRow } from "@/components/clickable-row";
 import { getCurrentEmployee } from "@/lib/supabase/server";
 import { buildConflictIndex, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
@@ -26,9 +27,11 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
   const q = param(searchParams.q).toLowerCase();
   const contextId = UUID_RE.test(param(searchParams.context)) ? param(searchParams.context) : "";
   const added = param(searchParams.added);
+  const updated = param(searchParams.updated);
+  const deleted = param(searchParams.deleted);
   const conflictCount = Number.parseInt(param(searchParams.conflicts), 10) || 0;
 
-  const { supabase } = await getCurrentEmployee();
+  const { supabase, employee } = await getCurrentEmployee();
   const [infos, conflicts, { contexts }] = await Promise.all([
     fetchInfos(supabase),
     fetchConflicts(supabase),
@@ -53,17 +56,20 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
         </Link>
       </PageHeader>
 
-      {added && (
+      {(added || updated) && (
         <div className={`mb-6 rounded-lg border px-4 py-3 text-sm ${conflictCount ? "border-red-200 bg-red-50 text-red-800" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}>
           {conflictCount ? (
             <>
-              Info ajoutée. <strong>{conflictCount} contradiction(s)</strong> détectée(s) : l&apos;auteur de
+              Info {added ? "ajoutée" : "modifiée"}. <strong>{conflictCount} contradiction(s)</strong> détectée(s) : l&apos;auteur de
               l&apos;info existante a été notifié pour validation. <Link href="/conflicts" className="font-medium underline">Voir les conflits</Link>
             </>
           ) : (
-            "Info ajoutée, aucune contradiction détectée."
+            `Info ${added ? "ajoutée" : "modifiée"}, aucune contradiction détectée.`
           )}
         </div>
+      )}
+      {deleted && (
+        <p className="mb-6 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">Info supprimée.</p>
       )}
 
       <form className="mb-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-[1fr_220px_auto]">
@@ -132,6 +138,18 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
                         <div className="mt-3 space-y-3 rounded-lg bg-slate-50 p-3">
                           <p className="text-slate-700">{info.content}</p>
                           <TrustPills info={info} />
+                          {employee && info.employee_id === employee.id && (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Link
+                                href={`/knowledge/${info.id}/edit`}
+                                className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                              >
+                                <Pencil className="h-3.5 w-3.5" /> Modifier
+                              </Link>
+                              <DeleteInfoButton infoId={info.id} title={info.title} compact />
+                              <span className="text-xs text-slate-400">Tu es l&apos;auteur de cette info.</span>
+                            </div>
+                          )}
                           {infoConflicts.length > 0 && (
                             <p className="flex flex-wrap items-center gap-2 text-red-700">
                               Contredite par :
