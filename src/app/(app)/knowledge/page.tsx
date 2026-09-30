@@ -92,17 +92,17 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
       {results.length === 0 ? (
         <EmptyState>Aucune info. Connecte des sources ou ajoute une info.</EmptyState>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <table className="w-full min-w-[40rem] table-fixed text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
               <tr>
-                <th className="w-16 px-4 py-2.5 text-center">Score</th>
+                <th className="w-20 px-4 py-2.5 text-center">Score</th>
                 <th className="px-4 py-2.5">Document</th>
-                <th className="hidden px-4 py-2.5 lg:table-cell">Sujet</th>
-                <th className="hidden px-4 py-2.5 md:table-cell">Périmètre</th>
-                <th className="hidden px-4 py-2.5 xl:table-cell">Source</th>
-                <th className="hidden px-4 py-2.5 lg:table-cell">Auteur</th>
-                <th className="hidden px-4 py-2.5 sm:table-cell">Mis à jour</th>
+                <th className="hidden w-44 px-4 py-2.5 lg:table-cell">Sujet</th>
+                <th className="hidden w-40 px-4 py-2.5 md:table-cell">Périmètre</th>
+                <th className="hidden w-32 px-4 py-2.5 xl:table-cell">Source</th>
+                <th className="hidden w-40 px-4 py-2.5 lg:table-cell">Auteur</th>
+                <th className="hidden w-32 px-4 py-2.5 sm:table-cell">Mis à jour</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -148,8 +148,8 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
                         </div>
                       </details>
                     </td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap lg:table-cell">{info.context?.label ?? "—"}</td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap md:table-cell">
+                    <td className="hidden px-4 py-3 truncate lg:table-cell">{info.context?.label ?? "—"}</td>
+                    <td className="hidden px-4 py-3 truncate md:table-cell">
                       {info.client ? (
                         <Link href={`/clients/${info.client.id}`} className="hover:text-indigo-700 hover:underline">{info.client.name}</Link>
                       ) : (
@@ -157,7 +157,7 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
                       )}
                     </td>
                     <td className="hidden px-4 py-3 whitespace-nowrap xl:table-cell">{sourceName(info.source_type)}</td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap lg:table-cell">
+                    <td className="hidden px-4 py-3 truncate lg:table-cell">
                       {info.owner ? (
                         <Link href={`/team/${info.owner.id}`} className="hover:text-indigo-700 hover:underline">{info.owner.full_name}</Link>
                       ) : (

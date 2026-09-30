@@ -23,7 +23,7 @@ export default async function ClientsPage() {
       {clients.length === 0 ? (
         <EmptyState>Aucun client. Crée le premier avec « Nouveau client ».</EmptyState>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
               <tr>
