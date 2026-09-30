@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { supabase, user, employee } = await getCurrentEmployee();
   if (!user) redirect("/login");
 
-  const notifications = await fetchNotifications(supabase, { limit: 30 });
+  const notifications = await fetchNotifications(supabase);
   const toHandle = notifications.filter((n) => n.status === "open" && n.kind !== "resolution").length;
   const name = employee?.full_name ?? user.email ?? "";
 

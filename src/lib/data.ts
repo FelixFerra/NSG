@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   Client,
@@ -11,19 +12,22 @@ import type {
   Notification,
 } from "./types";
 
+// Les lectures sont mémorisées pour la durée d'une requête (cache() de React) :
+// le layout et la page partagent le même client Supabase, donc les mêmes résultats.
+
 const INFO_SELECT =
   "*, owner:employees(id, full_name, job_title, email), client:clients(id, name, country), context:contexts(id, label, slug)";
 
-export async function fetchInfos(supabase: SupabaseClient) {
+export const fetchInfos = cache(async (supabase: SupabaseClient) => {
   const { data, error } = await supabase
     .from("infos")
     .select(INFO_SELECT)
     .order("source_updated_at", { ascending: false });
   if (error) throw new Error("Impossible de charger les infos.");
   return (data ?? []) as InfoWithRelations[];
-}
+});
 
-export async function fetchReferenceData(supabase: SupabaseClient) {
+export const fetchReferenceData = cache(async (supabase: SupabaseClient) => {
   const [clients, contexts, employees, expertise] = await Promise.all([
     supabase.from("clients").select("*").order("name"),
     supabase.from("contexts").select("*").order("label"),
@@ -36,35 +40,35 @@ export async function fetchReferenceData(supabase: SupabaseClient) {
     employees: (employees.data ?? []) as Employee[],
     expertise: (expertise.data ?? []) as ExpertiseScore[],
   };
-}
+});
 
 export type NotificationItem = Notification & {
   sender: Pick<Employee, "id" | "full_name"> | null;
   conflict: Pick<Conflict, "id" | "status"> | null;
 };
 
-/** Notifications de l'utilisateur connecté (RLS), non lues et à traiter d'abord. */
-export async function fetchNotifications(supabase: SupabaseClient, options: { limit?: number } = {}) {
+/** Notifications de l'utilisateur connecté (RLS), à traiter d'abord. */
+export const fetchNotifications = cache(async (supabase: SupabaseClient) => {
   const { data } = await supabase
     .from("notifications")
     .select("*, sender:employees!notifications_sender_id_fkey(id, full_name), conflict:conflicts(id, status)")
     .order("status", { ascending: false }) // 'open' avant 'done'
     .order("created_at", { ascending: false })
-    .limit(options.limit ?? 100);
+    .limit(100);
   return (data ?? []) as NotificationItem[];
-}
+});
 
-export async function fetchClientIssues(supabase: SupabaseClient, clientId?: string) {
+export const fetchClientIssues = cache(async (supabase: SupabaseClient, clientId?: string) => {
   let query = supabase.from("client_issues").select("*").order("created_at", { ascending: false });
   if (clientId) query = query.eq("client_id", clientId);
   const { data } = await query;
   return (data ?? []) as ClientIssue[];
-}
+});
 
-export async function fetchConflicts(supabase: SupabaseClient) {
+export const fetchConflicts = cache(async (supabase: SupabaseClient) => {
   const { data } = await supabase.from("conflicts").select("*").order("created_at", { ascending: false });
   return (data ?? []) as Conflict[];
-}
+});
 
 /** infoId -> infos qui la contredisent (conflits en attente uniquement). */
 export function buildConflictIndex(conflicts: Conflict[], infos: InfoWithRelations[]) {
