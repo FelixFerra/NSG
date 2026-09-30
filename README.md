@@ -6,35 +6,96 @@ Un consultant paie doit répondre vite à un client. La recherche remonte plusie
 
 ## Fonctionnalités
 
-- **Recherche contextuelle** : on choisit d'abord le client, qui est obligatoire, puis on pose une question en langage naturel. L'appli détecte le sujet, ne garde que les documents applicables (ceux du client et les documents généraux de son pays) et affiche une **carte de réponse directe** avec la phrase pertinente.
-- **Preuves de fiabilité** : chaque réponse affiche des pastilles (source, document officiel, signé, auteur, date de mise à jour, expiré, remplacé…) et un **score de 0 à 100** détaillé facteur par facteur. Aucune boîte noire.
-- **Détection des conflits** : deux infos du même sujet et du même périmètre qui donnent des chiffres différents (%, jours, €, mois) sont signalées. L'appli montre la réponse la plus probable, avec une alerte rouge qui liste la contradiction. Rien n'est masqué.
-- **Vue de résolution** : un écran scindé qui compare la source A et la source B. Le point exact de désaccord est surligné (`2.21%` contre `2.0%`), avec des boutons *Valider B* / *Rejeter B* accessibles à tout employé connecté. L'auteur de l'original est notifié en priorité, et des experts sont suggérés en cas de doute.
-- **Validation par les pairs** : quand quelqu'un ajoute une info qui en contredit une autre, l'**auteur de l'info d'origine** est notifié (ou l'expert référent du sujet si elle n'a pas d'auteur). Il valide ou rejette depuis la cloche de notifications, en un clic. La base se nettoie ainsi d'elle-même.
-- **Graphe d'expertise** : chaque employé a un score par domaine, et chaque conflit tranché ajoute +1. Si une recherche échoue ou si un conflit reste ouvert, l'appli recommande les experts les mieux notés sur le sujet et permet de **leur transférer le contexte** (notification dans l'appli ou e-mail prérempli).
-- **Boîte de réception** : chaque demande (validation, question transférée) arrive en notification. Un clic l'ouvre pour la traiter tout de suite, sinon elle reste dans la boîte de réception pour plus tard. Un expert à qui on transfère un conflit peut le trancher directement. S'il s'agit d'une simple question, il répond, et peut ajouter sa réponse à la base de savoir.
-- **Collaborateurs** : on peut consulter le profil de chaque collègue (expertise par domaine, infos publiées, clients suivis, conflits tranchés) et lui poser une question.
-- **Fiches clients** : on peut créer un client et remplir son profil (contact, effectif, particularités). Sa fiche liste ses problèmes en cours et n'affiche que ses documents ; les règles générales de son pays sont dans une section à part. Les conflits qui le concernent y apparaissent aussi.
+- **Recherche** : on choisit un client (facultatif) et un sujet (facultatif, sinon il est détecté), puis on pose une question en langage naturel. Chaque sujet donne une **carte de réponse directe**, avec la phrase pertinente et un **score de confiance expliqué**.
+- **Preuves de fiabilité** : des pastilles indiquent la source, si le document est officiel ou signé, l'auteur, la date de mise à jour, s'il est expiré, remplacé ou rejeté.
+- **Conflits groupés** : toutes les versions contradictoires d'un même sujet (par exemple 4 taux d'indexation différents pour un client) forment **un seul conflit**. On les voit côte à côte, avec les chiffres en désaccord surlignés, et on choisit **la bonne version** en un clic.
+- **Validation par les pairs** : quand une nouvelle info en contredit une autre, l'auteur de l'info d'origine reçoit une demande de validation. La base se nettoie ainsi d'elle-même.
+- **Boîte de réception** : elle regroupe les validations, les questions transférées par des collègues et les réponses reçues. On traite chaque demande tout de suite ou plus tard.
+- **Collaborateurs** : on voit le profil de chaque collègue (score d'expertise par domaine, infos publiées, clients suivis, conflits tranchés) et on peut lui poser une question.
+- **Clients** : on crée et on édite des fiches clients (profil, contact, problèmes en cours). Chaque fiche n'affiche que les documents et conflits du client ; les règles générales de son pays sont dans une section à part.
+- **Documents** : un tableau de toute la base, avec le score de chaque document ; un clic sur une ligne déplie le détail. On peut aussi ajouter une info.
+- **Mon profil** : chacun modifie son nom, son poste, son service et son pays.
 - **Sources connectées** : Outlook, Gmail, Teams, Slack, SharePoint, OneDrive, Google Drive, Confluence. *La connexion est simulée.*
+
+## Comment ça marche
+
+### 1. Le score de confiance (0 à 100)
+
+Chaque info reçoit un score calculé à partir de 5 facteurs. Chaque point est affiché et justifié dans l'interface (« Pourquoi ce score ? ») : aucune boîte noire. Le code est dans `src/lib/trust.ts`.
+
+| Facteur | Max | Règle |
+| --- | --- | --- |
+| **Fraîcheur** | 25 | Mise à jour il y a 90 jours ou moins : **25**. Entre 91 et 365 jours : **12**. Plus d'un an : **0**. Toujours **0** si l'info est expirée (`valid_until` dépassée), archivée, remplacée ou rejetée. |
+| **Auteur** | 20 | Auteur identifié : **20**. Sans auteur : **0**, car personne ne maintient l'info. |
+| **Statut** | 20 | Document officiel : **+12**. Document signé : **+8**. Une info ajoutée depuis l'appli ne peut s'attribuer ni l'un ni l'autre : c'est imposé côté base. |
+| **Source** | 15 | SharePoint **15**, Confluence **13**, OneDrive / Google Drive **8**, Outlook / Gmail **6**, saisie manuelle **5**, Teams / Slack **3**. Un référentiel documentaire vaut plus qu'une conversation. |
+| **Périmètre** | 20 | Info propre au client recherché : **20**. Même pays que le client : **15**. Pays inconnu : **8**. Autre pays : **0**. |
+| **Conflit** | −10 | Retiré si une autre source contredit l'info et que le conflit n'est pas encore tranché. |
+
+Le score total est borné entre 0 et 100, puis converti en niveau : **Fiable** à partir de 70, **À vérifier** de 45 à 69, **Peu fiable** en dessous de 45.
+
+*Exemple.* Pour Brasserie Lambert, la note SharePoint officielle et signée de 20 jours, écrite par une experte, valable en Belgique et contredite, obtient 25 + 20 + 20 + 15 + 15 − 10 = **85**. Le message Teams d'un collègue, propre au client, obtient 25 + 20 + 0 + 3 + 20 − 10 = **58**. La vieille note OneDrive sans auteur obtient 0 + 0 + 0 + 8 + 15 − 10 = **13**.
+
+### 2. La recherche
+
+Le code est dans `src/lib/search.ts`.
+1. **Nettoyage de la question** : elle est mise en minuscules et débarrassée de ses accents et des mots vides (« le », « quel », « pour »…).
+2. **Détection du sujet** : les mots de la question sont comparés aux mots-clés de chaque sujet, par exemple `indexation, taux, augmentation…` pour « Indexation salariale ». Le sujet qui obtient le plus de correspondances est retenu, sauf si l'utilisateur en a choisi un. Deux mots correspondent aussi si l'un commence par l'autre (4 lettres minimum) : « congé » trouve donc « congés ».
+3. **Périmètre** : avec un client, on garde ses infos propres et les infos générales de son pays. Sans client, on garde toute la base. Les infos rejetées sont exclues.
+4. **Pertinence** : c'est le nombre de mots de la question retrouvés dans le document, plus 2 si le document porte sur le sujet détecté.
+5. **Carte de réponse** : il y en a une par sujet, 3 au maximum. La réponse principale est choisie **d'abord parmi les infos utilisables** (actives, non remplacées, non expirées), puis **par score de confiance**, puis par pertinence. On affiche la phrase du document qui contient le plus de mots de la question. Les autres sources restent visibles : rien n'est masqué.
+
+### 3. La détection des conflits
+
+Elle se fait en base de données. Un trigger PostgreSQL, `detect_info_conflicts`, se déclenche à chaque nouvelle info. Il y a conflit entre deux infos si :
+1. elles sont **actives** toutes les deux ;
+2. elles portent sur le **même sujet** ;
+3. elles ont le **même périmètre** : même client, ou même pays quand l'une des deux est générale ;
+4. leurs **faits chiffrés diffèrent**.
+
+Les faits chiffrés sont extraits par une expression régulière (fonction `info_facts`) : ce sont les nombres suivis d'une unité. Par exemple « 2,21 % » donne `2.21%`, « 28 jours » donne `28j`, « 8 € » donne `8€` et « 3 mois » donne `3m`.
+
+L'info la plus ancienne est « l'original » ; son **auteur** reçoit une demande de validation. Si elle n'a pas d'auteur, c'est l'expert n°1 du sujet qui la reçoit.
+
+### 4. Le regroupement et la résolution des conflits
+
+Les conflits en attente qui partagent au moins un document sont réunis en **groupe** (une composante connexe) : 4 versions d'un même taux font 1 conflit, et non 6 paires.
+
+N'importe quel employé connecté peut trancher, en choisissant **la bonne version**. La fonction SQL `resolve_conflict_group` alors :
+- garde la version choisie **active** ;
+- **archive** les versions plus anciennes et les marque comme remplacées par la version choisie ;
+- **rejette** les versions plus récentes ;
+- clôt tous les conflits du groupe et les demandes de validation liées ;
+- prévient chaque auteur que sa version a été retenue ou non ;
+- ajoute **+1** au score d'expertise de la personne qui a tranché, sur ce sujet.
+
+### 5. Le score d'expertise
+
+- Chaque employé a un score **par sujet**. Trancher un conflit ou répondre à une question transférée rapporte **+1** sur le sujet concerné.
+- Les niveaux sont : **Référent** à partir de 10 points, **Confirmé** à partir de 5, **Contributeur** à partir de 1.
+- Quand une recherche ne trouve rien ou qu'un conflit reste ouvert, l'appli recommande les employés qui ont le meilleur score sur ce sujet ; à score égal, elle privilégie ceux du pays du client. On peut leur **transférer le contexte** en un clic : la question, le client et les versions en conflit arrivent dans leur boîte de réception.
 
 ## Modèle de données
 
 | Table | Rôle |
 | --- | --- |
 | `employees` | Employés (liés à `auth.users` quand ils ont un compte) |
-| `clients` | Clients, avec pays et responsable |
-| `contexts` | Types de problème, avec mots-clés pour la détection du sujet |
-| `infos` | Savoir : `employee_id`, `client_id`, `context_id`, source, pays, statut officiel, signature, validité |
-| `conflicts` | Paires d'infos contradictoires (original / challenger), validateur, statut |
-| `notifications` | Demandes de validation, transferts à un expert, résultats |
-| `expertise_scores` | Score par employé et par domaine |
+| `clients` | Clients : pays, secteur, responsable, contact, effectif, description |
+| `client_issues` | Problèmes en cours d'un client |
+| `contexts` | Sujets (types de problème), avec mots-clés pour la détection |
+| `infos` | Savoir : `employee_id`, `client_id`, `context_id`, source, pays, officiel, signé, validité, statut |
+| `conflicts` | Paires d'infos contradictoires, regroupées à l'affichage |
+| `notifications` | Demandes de validation, questions transférées, réponses |
+| `expertise_scores` | Score par employé et par sujet |
 | `data_sources` | Outils connectés par chaque employé |
 
-**Sécurité** (Row Level Security partout) :
+**Sécurité** (Row Level Security sur toutes les tables) :
 - Rien n'est lisible sans être connecté.
-- Chacun ne voit que ses propres notifications et sources.
-- Les conflits, scores et notifications ne s'écrivent que par des fonctions SQL qui vérifient la session : impossible, par exemple, de gonfler un score ou d'envoyer une notification au nom d'un autre.
-- Une info ajoutée depuis l'appli ne peut pas s'auto-déclarer « officielle » ou « signée ». Sa date est fixée par le serveur et les ajouts sont limités en débit.
+- Chacun ne voit que ses propres notifications et sources connectées.
+- Chacun ne modifie que **son** profil, et seulement son nom, son poste, son service et son pays (droits par colonne).
+- Les conflits, scores et notifications ne s'écrivent que par des fonctions SQL `security definer` qui vérifient la session : impossible de gonfler un score ou d'envoyer une notification au nom d'un autre.
+- Une info ajoutée depuis l'appli ne peut pas se déclarer officielle ou signée. Sa date est fixée par le serveur et les ajouts sont limités en débit, comme les transferts à un expert.
+- La session est vérifiée par la signature du jeton (clés ES256). Aucune clé secrète ne figure dans le code.
 
 ## Lancer le projet
 
@@ -44,7 +105,8 @@ Un consultant paie doit répondre vite à un client. La recherche remonte plusie
    2. `supabase/migrations/0002_trust_workflow.sql`
    3. `supabase/migrations/0003_inbox_clients.sql`
    4. `supabase/migrations/0004_open_conflict_resolution.sql`
-   5. `supabase/seed.sql` (données de démo, relançable pour remettre la démo à zéro)
+   5. `supabase/migrations/0005_conflict_groups.sql`
+   6. `supabase/seed.sql` (données de démo, relançable pour remettre la démo à zéro)
 3. Pour la démo, désactiver la confirmation d'e-mail : *Authentication > Sign In / Providers > Email > Confirm email*.
 4. Configurer l'environnement puis lancer :
    ```bash
@@ -56,11 +118,11 @@ Un consultant paie doit répondre vite à un client. La recherche remonte plusie
 
 **Scénario de démo**
 1. Crée un compte avec `sophie.peeters@example.com`. Il est automatiquement relié à la fiche de l'experte du seed.
-2. Va dans **Rechercher** et choisis *Brasserie Lambert*. Pose la question « Quel taux d'indexation appliquer en janvier ? ». Tu obtiens la réponse officielle à 2,21 %, une alerte de contradiction avec le message Teams (2,0 %) et l'ancienne note sans auteur (1,79 %).
-3. Clique sur **Comparer** pour ouvrir la vue scindée, puis tranche. La cloche se vide et ton score d'indexation augmente.
-4. Pose une question sans réponse documentée (ex. « télétravail ») : l'appli recommande des experts à qui transférer la demande.
+2. Dans **Rechercher**, choisis *Brasserie Lambert* et demande « Quel taux d'indexation appliquer en janvier ? ». Tu obtiens la réponse officielle à 2,21 % (85/100) et une alerte : 3 versions se contredisent (2,21 %, 2,0 % sur Teams, 1,79 % dans une vieille note sans auteur).
+3. Clique sur **Comparer les versions** et choisis la bonne. Les autres sont archivées ou rejetées, leurs auteurs sont prévenus et ton score d'indexation augmente.
+4. Pose une question sans réponse documentée (par exemple « télétravail ») : l'appli recommande des collègues à qui transférer la demande.
 
-**Déploiement sur Vercel** : importer le repo (Framework Preset : Next.js) et ajouter `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Dans Supabase, ajouter l'URL Vercel dans *Authentication > URL Configuration*.
+**Déploiement sur Vercel** : importer le repo (Framework Preset : Next.js) et ajouter `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY`. L'appli tourne à Francfort (`vercel.json`), près de la base. Dans Supabase, ajouter l'URL Vercel dans *Authentication > URL Configuration*.
 
 ## Stack
 
@@ -70,5 +132,5 @@ Next.js 16 (App Router, Server Actions), Tailwind CSS 4, Supabase (Postgres, Aut
 
 - **Connecteurs** : ils n'appellent pas encore les vraies API (Microsoft Graph, Google, Slack). Les infos viennent du seed ou d'une saisie manuelle. Les métadonnées « officiel » et « signé » devraient être extraites à l'import.
 - **Compréhension des questions** : elle repose sur des mots-clés, sans modèle de langage. L'étape suivante est une recherche sémantique (embeddings) et une réponse rédigée par un LLM, citant ses sources.
-- **Détection des contradictions** : elle compare les faits chiffrés (%, jours, €, mois). Deux textes qui se contredisent sans chiffres ne sont pas détectés.
+- **Détection des contradictions** : elle ne compare que les faits chiffrés (%, jours, €, mois). Deux textes qui se contredisent sans chiffres ne sont pas détectés, et des chiffres différents qui disent la même chose (2,5 jours par mois et 30 jours par an) créent un faux conflit. Un LLM pourrait servir de second filtre.
 - **Notifications** : elles restent dans l'appli, sans envoi par e-mail ni dans Teams.

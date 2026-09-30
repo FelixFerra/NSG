@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight, Plus } from "lucide-react";
+import { ClickableRow } from "@/components/clickable-row";
 import { getCurrentEmployee } from "@/lib/supabase/server";
 import { fetchClientIssues, fetchInfos, fetchReferenceData } from "@/lib/data";
 import { Badge, EmptyState, PageHeader } from "@/components/ui";
@@ -42,7 +43,7 @@ export default async function ClientsPage() {
                 const docs = infos.filter((i) => i.client_id === client.id).length;
                 const open = issues.filter((i) => i.client_id === client.id && i.status === "open").length;
                 return (
-                  <tr key={client.id} className="hover:bg-slate-50">
+                  <ClickableRow key={client.id} href={`/clients/${client.id}`}>
                     <td className="px-4 py-3">
                       <Link href={`/clients/${client.id}`} className="font-medium text-slate-900 hover:text-indigo-700 hover:underline">
                         {client.name}
@@ -64,7 +65,7 @@ export default async function ClientsPage() {
                         <ChevronRight className="h-4 w-4" />
                       </Link>
                     </td>
-                  </tr>
+                  </ClickableRow>
                 );
               })}
             </tbody>

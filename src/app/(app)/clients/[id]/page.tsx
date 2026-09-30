@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Mail, RotateCcw, Search, Users } from "lucide-react";
 import { getCurrentEmployee } from "@/lib/supabase/server";
-import { buildConflictIndex, fetchClientIssues, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
-import { computeTrust } from "@/lib/trust";
+import { buildConflictGroups, buildConflictIndex, fetchClientIssues, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
+import { computeTrust, extractFacts } from "@/lib/trust";
 import { sourceName } from "@/lib/connectors";
 import type { ClientIssue, Context, Employee, InfoWithRelations } from "@/lib/types";
 import { Badge, Card, EmptyState, formatDate } from "@/components/ui";
@@ -37,8 +37,9 @@ export default async function ClientPage(props: PageProps<"/clients/[id]">) {
   const specific = infos.filter((i) => i.client_id === client.id);
   const general = infos.filter((i) => !i.client_id && i.country === client.country && i.status === "active");
   const relatedIds = new Set(specific.map((i) => i.id));
-  const clientConflicts = conflicts.filter(
-    (c) => c.status === "pending" && (relatedIds.has(c.original_info_id) || relatedIds.has(c.challenger_info_id)),
+  // Un groupe par sujet contesté (toutes les versions ensemble)
+  const clientConflicts = buildConflictGroups(conflicts).filter(
+    (g) => g.pending && g.infoIds.some((id) => relatedIds.has(id)),
   );
   const openIssues = issues.filter((i) => i.status === "open");
   const resolvedIssues = issues.filter((i) => i.status === "resolved");
@@ -138,12 +139,13 @@ export default async function ClientPage(props: PageProps<"/clients/[id]">) {
             <p className="text-sm text-slate-400">Aucune contradiction en attente.</p>
           ) : (
             <ul className="space-y-2">
-              {clientConflicts.map((c) => (
-                <li key={c.id}>
-                  <Link href={`/conflicts/${c.id}`} className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 hover:bg-red-100">
+              {clientConflicts.map((g) => (
+                <li key={g.key}>
+                  <Link href={`/conflicts/${g.key}`} className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 hover:bg-red-100">
                     <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
                     <span className="min-w-0 flex-1 truncate">
-                      {byId.get(c.original_info_id)?.title} <span className="text-red-500">vs</span> {byId.get(c.challenger_info_id)?.title}
+                      <strong>{contexts.find((x) => x.id === g.contextId)?.label ?? "Sujet"}</strong> : {g.infoIds.length} versions (
+                      {g.infoIds.map((id) => extractFacts(byId.get(id)?.content ?? "").join(", ") || "?").join(" / ")})
                     </span>
                     <ArrowRight className="h-4 w-4 shrink-0" />
                   </Link>

@@ -85,9 +85,21 @@ export async function answerHandoff(_prev: ActionState, formData: FormData): Pro
   redirect("/inbox?done=1");
 }
 
+/** Trancher un groupe de conflits en choisissant la bonne version. */
+export async function resolveConflictGroup(formData: FormData) {
+  const conflictId = uuidField(formData, "conflict_id");
+  const winnerId = uuidField(formData, "winner_info_id");
+  if (!conflictId || !winnerId) return;
+
+  const { supabase } = await getCurrentEmployee();
+  await supabase.rpc("resolve_conflict_group", { p_conflict_id: conflictId, p_winner_info_id: winnerId });
+
+  revalidatePath("/", "layout");
+}
+
 /** Après une décision prise depuis la boîte : on revient à la liste. */
-export async function resolveConflictFromInbox(formData: FormData) {
-  await resolveConflict(formData);
+export async function resolveConflictGroupFromInbox(formData: FormData) {
+  await resolveConflictGroup(formData);
   redirect("/inbox");
 }
 

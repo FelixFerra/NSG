@@ -1,15 +1,10 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { ClickableRow } from "@/components/clickable-row";
 import { getCurrentEmployee } from "@/lib/supabase/server";
-import { fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
+import { buildConflictGroups, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
+import { extractFacts } from "@/lib/trust";
 import { Badge, EmptyState, PageHeader, formatDate } from "@/components/ui";
-
-const STATUS = {
-  pending: { label: "En attente", tone: "warn" },
-  accepted: { label: "B validée", tone: "good" },
-  rejected: { label: "A conservée", tone: "neutral" },
-  obsolete: { label: "Sans objet", tone: "neutral" },
-} as const;
 
 export default async function ConflictsPage() {
   const { supabase, employee } = await getCurrentEmployee();
@@ -19,16 +14,16 @@ export default async function ConflictsPage() {
     fetchReferenceData(supabase),
   ]);
   const byId = new Map(infos.map((i) => [i.id, i]));
-  const sorted = [...conflicts].sort((a, b) => Number(b.status === "pending") - Number(a.status === "pending"));
-  const pending = conflicts.filter((c) => c.status === "pending").length;
+  const groups = buildConflictGroups(conflicts);
+  const pending = groups.filter((g) => g.pending).length;
 
   return (
     <>
       <PageHeader
         title="Conflits"
-        subtitle={`${pending} en attente sur ${conflicts.length}. Rien n'est masqué : chaque contradiction est tranchée par un humain.`}
+        subtitle={`${pending} sujet(s) en attente. Toutes les versions contradictoires d'un même sujet sont regroupées : on choisit la bonne.`}
       />
-      {sorted.length === 0 ? (
+      {groups.length === 0 ? (
         <EmptyState>Aucune contradiction détectée.</EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
@@ -36,44 +31,62 @@ export default async function ConflictsPage() {
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
               <tr>
                 <th className="px-4 py-2.5">Statut</th>
-                <th className="px-4 py-2.5">A · version actuelle</th>
-                <th className="hidden px-4 py-2.5 md:table-cell">B · nouvelle version</th>
-                <th className="hidden px-4 py-2.5 lg:table-cell">Sujet</th>
+                <th className="px-4 py-2.5">Sujet</th>
+                <th className="hidden px-4 py-2.5 md:table-cell">Versions en désaccord</th>
+                <th className="hidden px-4 py-2.5 lg:table-cell">Périmètre</th>
                 <th className="hidden px-4 py-2.5 lg:table-cell">Validation</th>
-                <th className="hidden px-4 py-2.5 sm:table-cell">Détecté</th>
+                <th className="hidden px-4 py-2.5 sm:table-cell">Date</th>
                 <th className="w-8" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {sorted.map((c) => {
-                const a = byId.get(c.original_info_id);
-                const b = byId.get(c.challenger_info_id);
-                const assignee = employees.find((e) => e.id === c.assignee_id);
-                const context = contexts.find((x) => x.id === c.context_id);
-                const status = STATUS[c.status];
-                const mine = c.status === "pending" && c.assignee_id === employee?.id;
+              {groups.map((g) => {
+                const versions = g.infoIds
+                  .map((id) => byId.get(id))
+                  .filter((v) => v !== undefined)
+                  .sort((a, b) => a.source_updated_at.localeCompare(b.source_updated_at));
+                const context = contexts.find((x) => x.id === g.contextId);
+                const client = versions.find((v) => v.client)?.client;
+                const scope = client?.name ?? versions[0]?.country ?? "—";
+                const validators = g.assigneeIds.map((id) => employees.find((e) => e.id === id)?.full_name).filter(Boolean);
+                const mine = g.pending && !!employee && g.assigneeIds.includes(employee.id);
+                const winner = g.pending ? null : versions.find((v) => v.status === "active" && !v.superseded_by);
                 return (
-                  <tr key={c.id} className={c.status === "pending" ? "hover:bg-slate-50" : "text-slate-500 hover:bg-slate-50"}>
+                  <ClickableRow key={g.key} href={`/conflicts/${g.key}`} className={g.pending ? "" : "text-slate-500"}>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Badge tone={status.tone}>{status.label}</Badge>
+                      <Badge tone={g.pending ? "warn" : "good"}>{g.pending ? "En attente" : "Tranché"}</Badge>
                       {mine && <span className="ml-1.5"><Badge tone="bad">À toi</Badge></span>}
                     </td>
-                    <td className="max-w-64 px-4 py-3">
-                      <Link href={`/conflicts/${c.id}`} className="block truncate font-medium text-slate-900 hover:text-indigo-700 hover:underline">
-                        {a?.title ?? "—"}
+                    <td className="px-4 py-3">
+                      <Link href={`/conflicts/${g.key}`} className="font-medium text-slate-900 hover:text-indigo-700 hover:underline">
+                        {context?.label ?? "Sans sujet"}
                       </Link>
-                      <p className="truncate text-xs text-slate-500 md:hidden">vs {b?.title ?? "—"}</p>
+                      <p className="text-xs text-slate-500">
+                        {versions.length} versions{winner ? ` · retenue : ${winner.title}` : ""}
+                      </p>
                     </td>
-                    <td className="hidden max-w-64 truncate px-4 py-3 md:table-cell">{b?.title ?? "—"}</td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap lg:table-cell">{context?.label ?? "—"}</td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap lg:table-cell">{assignee?.full_name ?? "—"}</td>
-                    <td className="hidden px-4 py-3 whitespace-nowrap text-slate-500 sm:table-cell">{formatDate(c.created_at)}</td>
-                    <td className="pr-3">
-                      <Link href={`/conflicts/${c.id}`} aria-label="Ouvrir le conflit" className="text-slate-400 hover:text-slate-700">
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      <div className="flex flex-wrap gap-1">
+                        {versions.map((v) => (
+                          <code
+                            key={v.id}
+                            title={v.title}
+                            className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
+                              winner?.id === v.id ? "bg-emerald-50 text-emerald-700" : g.pending ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-400 line-through"
+                            }`}
+                          >
+                            {extractFacts(v.content).join(", ") || "?"}
+                          </code>
+                        ))}
+                      </div>
                     </td>
-                  </tr>
+                    <td className="hidden px-4 py-3 whitespace-nowrap lg:table-cell">{scope}</td>
+                    <td className="hidden px-4 py-3 lg:table-cell">{validators.join(", ") || "—"}</td>
+                    <td className="hidden px-4 py-3 whitespace-nowrap text-slate-500 sm:table-cell">{formatDate(g.createdAt)}</td>
+                    <td className="pr-3 text-slate-400">
+                      <ChevronRight className="h-4 w-4" />
+                    </td>
+                  </ClickableRow>
                 );
               })}
             </tbody>

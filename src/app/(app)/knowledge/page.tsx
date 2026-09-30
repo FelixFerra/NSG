@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, Plus, Search } from "lucide-react";
+import { ClickableRow } from "@/components/clickable-row";
 import { getCurrentEmployee } from "@/lib/supabase/server";
 import { buildConflictIndex, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
 import { computeTrust } from "@/lib/trust";
@@ -109,7 +110,7 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
               {results.map(({ info, trust, conflicts: infoConflicts }) => {
                 const inactive = info.status !== "active" || !!info.superseded_by;
                 return (
-                  <tr key={info.id} className={`align-top ${inactive ? "text-slate-400" : ""}`}>
+                  <ClickableRow key={info.id} className={`align-top ${inactive ? "text-slate-400" : ""}`}>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-block min-w-10 rounded-md px-1.5 py-0.5 text-sm font-semibold tabular-nums ${SCORE_TONE[trust.level]}`}>
                         {trust.score}
@@ -165,7 +166,7 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
                       )}
                     </td>
                     <td className="hidden px-4 py-3 whitespace-nowrap sm:table-cell">{formatDate(info.source_updated_at)}</td>
-                  </tr>
+                  </ClickableRow>
                 );
               })}
             </tbody>

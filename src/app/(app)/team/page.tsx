@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { ClickableRow } from "@/components/clickable-row";
 import { getCurrentEmployee } from "@/lib/supabase/server";
 import { authorityOf, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
 import { Badge, PageHeader } from "@/components/ui";
@@ -44,7 +45,7 @@ export default async function TeamPage() {
               const owned = infos.filter((i) => i.employee_id === e.id && i.status === "active").length;
               const resolved = conflicts.filter((c) => c.resolved_by === e.id).length;
               return (
-                <tr key={e.id} className="hover:bg-slate-50">
+                <ClickableRow key={e.id} href={`/team/${e.id}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700">
@@ -81,7 +82,7 @@ export default async function TeamPage() {
                       <ChevronRight className="h-4 w-4" />
                     </Link>
                   </td>
-                </tr>
+                </ClickableRow>
               );
             })}
           </tbody>

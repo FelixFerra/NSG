@@ -23,16 +23,38 @@ function shortTime(iso: string) {
 }
 
 export function InboxShell({
-  items,
+  items: allItems,
   clientNames,
   contextLabels,
+  groupKeys,
   children,
 }: {
   items: NotificationItem[];
   clientNames: Record<string, string>;
   contextLabels: Record<string, string>;
+  /** conflictId -> clé du groupe de conflits (mêmes documents). */
+  groupKeys: Record<string, string>;
   children: React.ReactNode;
 }) {
+  // Plusieurs demandes sur le même groupe de conflits = une seule ligne
+  const { items: grouped, counts: sameGroup } = useMemo(() => {
+    const kept: NotificationItem[] = [];
+    const counts = new Map<string, number>();
+    const firstByKey = new Map<string, string>();
+    for (const n of allItems) {
+      const group = n.conflict_id && n.kind !== "resolution" ? groupKeys[n.conflict_id] : undefined;
+      const key = group ? `${n.kind}:${group}:${n.status}` : null;
+      const first = key ? firstByKey.get(key) : undefined;
+      if (first) {
+        counts.set(first, (counts.get(first) ?? 1) + 1);
+        continue;
+      }
+      if (key) firstByKey.set(key, n.id);
+      kept.push(n);
+    }
+    return { items: kept, counts };
+  }, [allItems, groupKeys]);
+  const items = grouped;
   const pathname = usePathname();
   const selectedId = pathname.startsWith("/inbox/") ? pathname.split("/")[2] : null;
   const [tab, setTab] = useState<"todo" | "done">("todo");
@@ -137,6 +159,9 @@ export function InboxShell({
                     {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-indigo-600" aria-label="Non lu" />}
                   </p>
                   <p className="mt-0.5 truncate text-xs text-slate-500">
+                    {(sameGroup.get(n.id) ?? 1) > 1 && (
+                      <span className="mr-1 font-medium text-slate-700">{sameGroup.get(n.id)} demandes regroupées ·</span>
+                    )}
                     {n.sender?.full_name ? <span className="text-slate-600">{n.sender.full_name} — </span> : null}
                     {preview}
                   </p>

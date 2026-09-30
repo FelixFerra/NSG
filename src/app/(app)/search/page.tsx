@@ -34,7 +34,7 @@ export default async function SearchPage(props: PageProps<"/search">) {
   const client = clients.find((c) => c.id === clientId) ?? null;
   const conflictIndex = buildConflictIndex(conflicts, infos);
   const result =
-    client && question
+    question
       ? searchKnowledge({ question, client, contextId, infos, contexts, conflictIndex })
       : null;
 
@@ -43,7 +43,7 @@ export default async function SearchPage(props: PageProps<"/search">) {
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Pose ta question</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Client, puis sujet, puis ta question : la réponse dépend du pays et des accords du client.
+          Choisis un client pour une réponse adaptée à son pays et à ses accords, ou cherche dans toute la base.
         </p>
       </div>
 
@@ -51,16 +51,13 @@ export default async function SearchPage(props: PageProps<"/search">) {
         <div className="flex flex-col gap-2 md:flex-row">
           <label className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 md:w-64">
             <Building2 className="h-4 w-4 shrink-0 text-indigo-600" />
-            <span className="sr-only">Client (obligatoire)</span>
+            <span className="sr-only">Client</span>
             <select
               name="client"
-              required
               defaultValue={clientId}
               className="w-full bg-transparent py-2.5 text-sm font-medium text-indigo-900 outline-none"
             >
-              <option value="" disabled>
-                Client *
-              </option>
+              <option value="">Tous les clients</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} ({c.country})
@@ -99,31 +96,31 @@ export default async function SearchPage(props: PageProps<"/search">) {
 
       {!result && (
         <div className="mt-8 text-center text-sm text-slate-500">
-          {question && !client ? (
-            <p className="font-medium text-amber-700">Sélectionne un client pour lancer la recherche.</p>
-          ) : (
-            <>
-              <p className="mb-3">Exemples :</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {EXAMPLES.map((ex) => (
-                  <Link
-                    key={ex}
-                    href={`/search?client=${clients[0]?.id ?? ""}&q=${encodeURIComponent(ex)}`}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 hover:border-indigo-300 hover:text-indigo-700"
-                  >
-                    {ex}
-                  </Link>
-                ))}
-              </div>
-            </>
-          )}
+          <p className="mb-3">Exemples :</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {EXAMPLES.map((ex) => (
+              <Link
+                key={ex}
+                href={`/search?q=${encodeURIComponent(ex)}`}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 hover:border-indigo-300 hover:text-indigo-700"
+              >
+                {ex}
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 
-      {result && client && (
+      {result && (
         <div className="mt-8 space-y-6">
           <p className="text-sm text-slate-500">
-            Client <strong className="text-slate-800">{client.name}</strong> ({client.country})
+            {client ? (
+              <>
+                Client <strong className="text-slate-800">{client.name}</strong> ({client.country})
+              </>
+            ) : (
+              <>Toute la base, tous clients confondus</>
+            )}
             {result.detectedContext && (
               <>
                 {" "}· sujet détecté <strong className="text-slate-800">{result.detectedContext.label}</strong>
@@ -136,7 +133,7 @@ export default async function SearchPage(props: PageProps<"/search">) {
               question={question}
               client={client}
               context={result.detectedContext}
-              experts={rankExperts(expertise, employees, { contextId: result.detectedContext?.id, country: client.country })}
+              experts={rankExperts(expertise, employees, { contextId: result.detectedContext?.id, country: client?.country })}
               meId={employee?.id}
             />
           ) : (
@@ -148,7 +145,7 @@ export default async function SearchPage(props: PageProps<"/search">) {
                 client={client}
                 experts={
                   answer.conflicts.length > 0
-                    ? rankExperts(expertise, employees, { contextId: answer.main.info.context_id, country: client.country, limit: 2 })
+                    ? rankExperts(expertise, employees, { contextId: answer.main.info.context_id, country: client?.country, limit: 2 })
                     : []
                 }
                 meId={employee?.id}
@@ -170,7 +167,7 @@ function AnswerCard({
 }: {
   answer: Answer;
   question: string;
-  client: Client;
+  client: Client | null;
   experts: ReturnType<typeof rankExperts>;
   meId?: string;
 }) {
@@ -178,7 +175,7 @@ function AnswerCard({
   const hasConflict = answer.conflicts.length > 0;
   const handoff = [
     `Question : ${question}`,
-    `Client : ${client.name} (${client.country})`,
+    client ? `Client : ${client.name} (${client.country})` : "Client : non précisé",
     `Réponse trouvée : « ${main.info.title} » (${sourceName(main.info.source_type)}, ${formatDate(main.info.source_updated_at)})`,
     ...answer.conflicts.map((c) => `Contredite par : « ${c.other.title} » (${sourceName(c.other.source_type)})`),
     "Peux-tu confirmer la bonne information ?",
@@ -205,24 +202,24 @@ function AnswerCard({
 
         {hasConflict && (
           <div className="mt-5 rounded-xl border-2 border-red-300 bg-red-50 p-4">
-            <p className="flex items-center gap-2 font-semibold text-red-800">
-              <AlertTriangle className="h-5 w-5" /> Contradiction détectée : ne pas répondre au client sans vérifier
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-2 font-semibold text-red-800">
+                <AlertTriangle className="h-5 w-5" /> {answer.conflicts.length + 1} versions se contredisent : ne pas répondre sans vérifier
+              </p>
+              <Link
+                href={`/conflicts/${answer.conflicts[0].conflict.id}`}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500"
+              >
+                Comparer les versions <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
             <ul className="mt-3 space-y-2">
               {answer.conflicts.map(({ conflict, other }) => (
-                <li key={conflict.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/70 px-3 py-2 text-sm">
-                  <span className="text-red-900">
-                    <strong>{other.title}</strong> — « {other.content} »{" "}
-                    <span className="text-red-700">
-                      ({sourceName(other.source_type)}, {other.owner?.full_name ?? "sans auteur"}, {formatDate(other.source_updated_at)})
-                    </span>
+                <li key={conflict.id} className="rounded-lg bg-white/70 px-3 py-2 text-sm text-red-900">
+                  <strong>{other.title}</strong> — « {other.content} »{" "}
+                  <span className="text-red-700">
+                    ({sourceName(other.source_type)}, {other.owner?.full_name ?? "sans auteur"}, {formatDate(other.source_updated_at)})
                   </span>
-                  <Link
-                    href={`/conflicts/${conflict.id}`}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500"
-                  >
-                    Comparer <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
                 </li>
               ))}
             </ul>
@@ -278,7 +275,7 @@ function AnswerCard({
                 authority={x.authority}
                 topic={answer.context?.label ?? null}
                 handoffMessage={handoff}
-                clientId={client.id}
+                clientId={client?.id}
                 contextId={main.info.context_id}
                 conflictId={answer.conflicts[0]?.conflict.id}
                 isMe={x.employee.id === meId}
@@ -299,14 +296,14 @@ function NoAnswer({
   meId,
 }: {
   question: string;
-  client: Client;
+  client: Client | null;
   context: Context | null;
   experts: ReturnType<typeof rankExperts>;
   meId?: string;
 }) {
   const handoff = [
     `Question : ${question}`,
-    `Client : ${client.name} (${client.country})`,
+    client ? `Client : ${client.name} (${client.country})` : null,
     context ? `Sujet : ${context.label}` : null,
     "Aucun document fiable trouvé dans la base de savoir. Peux-tu m'aider ?",
   ]
@@ -316,7 +313,7 @@ function NoAnswer({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6">
       <p className="flex items-center gap-2 font-medium">
-        <SearchX className="h-5 w-5 text-slate-400" /> Aucune réponse documentée pour ce client
+        <SearchX className="h-5 w-5 text-slate-400" /> Aucune réponse documentée{client ? ` pour ${client.name}` : " dans la base"}
       </p>
       <p className="mt-1 text-sm text-slate-500">
         Plutôt que de deviner, voici {experts.length > 1 ? "les experts les plus qualifiés" : "l'expert le plus qualifié"}
@@ -332,7 +329,7 @@ function NoAnswer({
               authority={x.authority}
               topic={context?.label ?? null}
               handoffMessage={handoff}
-              clientId={client.id}
+              clientId={client?.id}
               contextId={context?.id}
               isMe={x.employee.id === meId}
             />

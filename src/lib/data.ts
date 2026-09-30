@@ -87,6 +87,67 @@ export function buildConflictIndex(conflicts: Conflict[], infos: InfoWithRelatio
 
 export type ConflictIndex = ReturnType<typeof buildConflictIndex>;
 
+/**
+ * Un groupe = des conflits qui partagent des documents (composante connexe).
+ * Ex. 4 versions du taux d'indexation d'un client = 1 groupe, pas 6 paires.
+ * Les conflits en attente et les conflits tranchés sont groupés séparément.
+ */
+export type ConflictGroup = {
+  key: string;
+  conflicts: Conflict[];
+  infoIds: string[];
+  pending: boolean;
+  contextId: string | null;
+  createdAt: string;
+  assigneeIds: string[];
+};
+
+export function buildConflictGroups(conflicts: Conflict[]): ConflictGroup[] {
+  const groups: ConflictGroup[] = [];
+  for (const pending of [true, false]) {
+    const subset = conflicts.filter((c) => (c.status === "pending") === pending);
+    const parent = new Map<string, string>();
+    const find = (x: string): string => {
+      const p = parent.get(x) ?? x;
+      if (p === x) return x;
+      const root = find(p);
+      parent.set(x, root);
+      return root;
+    };
+    for (const c of subset) {
+      const a = find(c.original_info_id);
+      const b = find(c.challenger_info_id);
+      if (a !== b) parent.set(a, b);
+    }
+    const byRoot = new Map<string, Conflict[]>();
+    for (const c of subset) {
+      const root = find(c.original_info_id);
+      byRoot.set(root, [...(byRoot.get(root) ?? []), c]);
+    }
+    for (const list of byRoot.values()) {
+      const sorted = [...list].sort((x, y) => x.created_at.localeCompare(y.created_at) || x.id.localeCompare(y.id));
+      const infoIds = [...new Set(sorted.flatMap((c) => [c.original_info_id, c.challenger_info_id]))];
+      groups.push({
+        key: sorted[0].id,
+        conflicts: sorted,
+        infoIds,
+        pending,
+        contextId: sorted[0].context_id,
+        createdAt: sorted[sorted.length - 1].created_at,
+        assigneeIds: [...new Set(sorted.map((c) => c.assignee_id).filter((x): x is string => !!x))],
+      });
+    }
+  }
+  return groups.sort((a, b) => Number(b.pending) - Number(a.pending) || b.createdAt.localeCompare(a.createdAt));
+}
+
+/** conflictId -> groupe qui le contient. */
+export function groupIndex(groups: ConflictGroup[]) {
+  const map = new Map<string, ConflictGroup>();
+  for (const g of groups) for (const c of g.conflicts) map.set(c.id, g);
+  return map;
+}
+
 export type RankedExpert = { employee: Employee; score: number; authority: Authority };
 
 export type Authority = { label: string; tone: "good" | "info" | "neutral" };

@@ -28,7 +28,6 @@ export async function connectSource(formData: FormData) {
   );
 
   revalidatePath("/sources");
-  revalidatePath("/dashboard");
 }
 
 export async function disconnectSource(formData: FormData) {
@@ -45,7 +44,6 @@ export async function disconnectSource(formData: FormData) {
     .eq("provider", provider);
 
   revalidatePath("/sources");
-  revalidatePath("/dashboard");
 }
 
 export async function syncSource(formData: FormData) {

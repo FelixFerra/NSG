@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Plug, BookOpenCheck, Building2, Users, Search, Scale, Inbox } from "lucide-react";
+import { Plug, BookOpenCheck, Building2, Users, Search, Scale, Inbox } from "lucide-react";
 
 const LINKS = [
   { href: "/search", label: "Rechercher", icon: Search },
   { href: "/inbox", label: "Boîte de réception", icon: Inbox },
-  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/knowledge", label: "Documents", icon: BookOpenCheck },
   { href: "/conflicts", label: "Conflits", icon: Scale },
   { href: "/clients", label: "Clients", icon: Building2 },

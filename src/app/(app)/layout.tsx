@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShieldCheck, LogOut } from "lucide-react";
 import { getCurrentEmployee } from "@/lib/supabase/server";
@@ -22,8 +23,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         <NavLinks inboxCount={toHandle} />
         <div className="mt-auto hidden border-t border-slate-200 p-4 md:block">
-          <p className="truncate text-sm font-medium">{name}</p>
-          <p className="truncate text-xs text-slate-500">{employee?.job_title ?? user.email}</p>
+          <Link href="/account" className="block rounded-md -mx-2 px-2 py-1 hover:bg-slate-100" title="Modifier mon profil">
+            <p className="truncate text-sm font-medium">{name}</p>
+            <p className="truncate text-xs text-slate-500">{employee?.job_title ?? user.email}</p>
+            <p className="text-xs text-indigo-600">Mon profil</p>
+          </Link>
           <form action={logout} className="mt-3">
             <button className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-900">
               <LogOut className="h-3.5 w-3.5" /> Se déconnecter
@@ -33,6 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-end gap-3 px-4 pt-4 md:hidden">
+          <Link href="/account" className="text-sm font-medium text-indigo-600">Mon profil</Link>
           <form action={logout}>
             <button aria-label="Se déconnecter" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600">
               <LogOut className="h-4 w-4" />

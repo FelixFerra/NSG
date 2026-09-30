@@ -118,9 +118,13 @@ export function extractFacts(text: string): string[] {
   return [...new Set([...text.matchAll(FACT_RE)].map((m) => factKey(m[1], m[2])))].sort();
 }
 
-/** Découpe un texte en segments, en marquant les faits absents de l'autre version. */
-export function highlightDisagreement(text: string, otherText: string) {
-  const other = new Set(extractFacts(otherText));
+/**
+ * Découpe un texte en segments, en marquant les faits sur lesquels les versions
+ * ne sont pas d'accord (absents d'au moins une autre version).
+ */
+export function highlightDisagreement(text: string, otherText: string | string[]) {
+  const others = (Array.isArray(otherText) ? otherText : [otherText]).map((t) => new Set(extractFacts(t)));
+  const other = { has: (fact: string) => others.every((set) => set.has(fact)) };
   const segments: { text: string; mark: boolean }[] = [];
   let last = 0;
   for (const m of text.matchAll(FACT_RE)) {

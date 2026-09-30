@@ -43,7 +43,8 @@ export function detectContext(question: string, contexts: Context[]) {
 }
 
 /** Infos applicables à un client : les siennes + les générales de son pays. */
-export function inClientScope(info: InfoWithRelations, client: Client) {
+export function inClientScope(info: InfoWithRelations, client: Client | null) {
+  if (!client) return true; // recherche sans client : toute la base
   if (info.client_id) return info.client_id === client.id;
   return !info.country || !client.country || info.country === client.country;
 }
@@ -75,7 +76,7 @@ export type Answer = {
 
 export function searchKnowledge(params: {
   question: string;
-  client: Client;
+  client: Client | null;
   contextId?: string | null;
   infos: InfoWithRelations[];
   contexts: Context[];
@@ -93,7 +94,7 @@ export function searchKnowledge(params: {
       const words = tokenize(`${info.title} ${info.content} ${info.source_label ?? ""} ${info.context?.label ?? ""}`);
       const relevance = overlap(tokens, words) + (detected && info.context_id === detected.id ? 2 : 0);
       const conflicts = (conflictIndex.get(info.id) ?? []).map((c) => c.other);
-      return { info, relevance, trust: computeTrust(info, conflicts, client.country) };
+      return { info, relevance, trust: computeTrust(info, conflicts, client?.country ?? null) };
     })
     .filter((s) => s.relevance > 0);
 
