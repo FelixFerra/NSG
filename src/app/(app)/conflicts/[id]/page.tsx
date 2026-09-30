@@ -92,12 +92,13 @@ export default async function ConflictPage(props: PageProps<"/conflicts/[id]">) 
           <p className="text-sm text-slate-600">
             Tranché{resolver ? ` par ${resolver.full_name}` : ""} le {formatDateTime(conflict.resolved_at)}.
           </p>
-        ) : allowed ? (
+        ) : (
           <>
             <p className="mb-4 text-sm text-slate-600">
-              Tu es autorisé·e à trancher. Ta décision met à jour la base, prévient l&apos;auteur de B et
-              augmente ton score d&apos;expertise sur ce sujet.
+              Tu peux trancher. Ta décision met à jour la base, prévient l&apos;auteur de B et augmente ton
+              score d&apos;expertise sur ce sujet.
             </p>
+            {allowed && (
             <div className="flex flex-col gap-3 sm:flex-row">
               <form action={resolveConflict} className="flex-1">
                 <input type="hidden" name="conflict_id" value={conflict.id} />
@@ -114,12 +115,8 @@ export default async function ConflictPage(props: PageProps<"/conflicts/[id]">) 
                 </SubmitButton>
               </form>
             </div>
-          </>
-        ) : (
-          <>
-            <p className="mb-4 text-sm text-slate-600">
-              Seuls l&apos;auteur de la source originale et l&apos;expert référent du sujet peuvent trancher.
-            </p>
+            )}
+            <p className="mt-6 mb-3 text-sm font-medium text-slate-700">Pas sûr·e ? Demande l&apos;avis d&apos;un expert :</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {experts.map((x) => (
                 <ExpertCard
