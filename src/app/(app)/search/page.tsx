@@ -9,6 +9,7 @@ import { Badge, formatDate } from "@/components/ui";
 import { TrustPills } from "@/components/trust-pills";
 import { TrustFactors, TrustScore } from "@/components/trust-score";
 import { ExpertCard } from "@/components/expert-card";
+import { DocumentCard } from "@/components/document-card";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -228,12 +229,13 @@ function AnswerCard({
       </div>
 
       <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-4 md:px-6">
-        <TrustPills info={main.info} />
+        <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">Preuves de fiabilité</p>
+        <TrustPills info={main.info} conflicts={answer.conflicts.length} />
         <details className="mt-3">
           <summary className="cursor-pointer text-sm font-medium text-slate-600 hover:text-slate-900">
             Pourquoi {main.trust.score}/100 ?
           </summary>
-          <div className="mt-3">
+          <div className="mt-3 max-w-xl rounded-md bg-white p-3 ring-1 ring-slate-200">
             <TrustFactors trust={main.trust} />
           </div>
         </details>
@@ -243,22 +245,11 @@ function AnswerCard({
             <summary className="cursor-pointer text-sm font-medium text-slate-600 hover:text-slate-900">
               {answer.others.length} autre(s) source(s) sur ce sujet
             </summary>
-            <ul className="mt-3 space-y-3">
+            <div className="mt-3 space-y-3">
               {answer.others.map((o) => (
-                <li key={o.info.id} className="rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium">{o.info.title}</p>
-                      <p className="mt-1 text-sm text-slate-600">{o.info.content}</p>
-                    </div>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-500">{o.trust.score}/100</span>
-                  </div>
-                  <div className="mt-2">
-                    <TrustPills info={o.info} />
-                  </div>
-                </li>
+                <DocumentCard key={o.info.id} info={o.info} trust={o.trust} />
               ))}
-            </ul>
+            </div>
           </details>
         )}
       </div>

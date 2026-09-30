@@ -4,8 +4,8 @@ import { ArrowLeft, Mail } from "lucide-react";
 import { getCurrentEmployee } from "@/lib/supabase/server";
 import { authorityOf, buildConflictIndex, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
 import { computeTrust } from "@/lib/trust";
-import { Badge, Card, EmptyState, formatDate } from "@/components/ui";
-import { TrustPills } from "@/components/trust-pills";
+import { Badge, Card, EmptyState } from "@/components/ui";
+import { DocumentCard } from "@/components/document-card";
 import { AskExpertForm } from "@/components/ask-expert-form";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -121,19 +121,8 @@ export default async function ExpertProfilePage(props: PageProps<"/team/[id]">) 
               {authored.map((info) => {
                 const trust = computeTrust(info, (index.get(info.id) ?? []).map((c) => c.other), info.client?.country ?? info.country);
                 return (
-                  <li key={info.id} className="rounded-lg border border-slate-200 p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">{info.title}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {info.context?.label ?? "—"} · {formatDate(info.source_updated_at)}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-500">{trust.score}/100</span>
-                    </div>
-                    <div className="mt-2">
-                      <TrustPills info={info} />
-                    </div>
+                  <li key={info.id}>
+                    <DocumentCard info={info} trust={trust} />
                   </li>
                 );
               })}

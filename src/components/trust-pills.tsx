@@ -1,59 +1,83 @@
-import { BadgeCheck, CalendarClock, CalendarX, Globe, PenLine, UserRound, UserX, Archive, Building2, Ban } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Archive, Ban, BadgeCheck, CalendarX, PenLine, UserX } from "lucide-react";
 import { sourceName } from "@/lib/connectors";
 import { isExpired } from "@/lib/trust";
 import type { InfoWithRelations } from "@/lib/types";
-import { Badge, formatDate } from "./ui";
+import { formatDate } from "./ui";
 import { ConnectorLogo } from "./connector-logo";
 
-/** Métadonnées qui prouvent (ou non) la valeur d'une info, en pastilles. */
-export function TrustPills({ info }: { info: InfoWithRelations }) {
-  const expired = isExpired(info);
+/**
+ * Preuves de fiabilité d'une info, en deux niveaux :
+ * 1. une ligne de métadonnées sobre (source · auteur · date · périmètre) ;
+ * 2. des signaux colorés, affichés seulement s'ils existent (officiel, signé, expiré…).
+ */
+export function TrustPills({ info, conflicts = 0 }: { info: InfoWithRelations; conflicts?: number }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-0.5 pr-2 pl-0.5 text-xs font-medium text-slate-700">
+    <div className="space-y-1.5">
+      <DocMeta info={info} />
+      <DocSignals info={info} conflicts={conflicts} />
+    </div>
+  );
+}
+
+export function DocMeta({ info }: { info: InfoWithRelations }) {
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+      <span className="inline-flex items-center gap-1.5 font-medium text-slate-700">
         <ConnectorLogo id={info.source_type} size="xs" />
         {sourceName(info.source_type)}
       </span>
-
-      {info.is_official ? (
-        <Badge tone="good"><BadgeCheck className="h-3 w-3" /> Document officiel</Badge>
-      ) : (
-        <Badge tone="warn">Non officiel</Badge>
-      )}
-
-      {info.is_signed ? (
-        <Badge tone="good"><PenLine className="h-3 w-3" /> Signé</Badge>
-      ) : (
-        <Badge>Non signé</Badge>
-      )}
-
+      {info.source_label && <span className="max-w-64 truncate" title={info.source_label}>{info.source_label}</span>}
+      <Dot />
       {info.owner ? (
-        <Badge><UserRound className="h-3 w-3" /> {info.owner.full_name}</Badge>
+        <Link href={`/team/${info.owner.id}`} className="hover:text-indigo-700 hover:underline">
+          {info.owner.full_name}
+        </Link>
       ) : (
-        <Badge tone="bad"><UserX className="h-3 w-3" /> Sans auteur</Badge>
+        <span className="text-red-600">Sans auteur</span>
       )}
-
-      <Badge><CalendarClock className="h-3 w-3" /> MAJ {formatDate(info.source_updated_at)}</Badge>
-
-      {expired ? (
-        <Badge tone="bad"><CalendarX className="h-3 w-3" /> Expiré le {formatDate(info.valid_until)}</Badge>
-      ) : info.valid_until ? (
-        <Badge>Valide jusqu&apos;au {formatDate(info.valid_until)}</Badge>
-      ) : null}
-
+      <Dot />
+      <span>MAJ {formatDate(info.source_updated_at)}</span>
+      <Dot />
       {info.client ? (
-        <Badge tone="info"><Building2 className="h-3 w-3" /> {info.client.name}</Badge>
-      ) : info.country ? (
-        <Badge><Globe className="h-3 w-3" /> {info.country}</Badge>
-      ) : null}
+        <Link href={`/clients/${info.client.id}`} className="hover:text-indigo-700 hover:underline">
+          {info.client.name}
+        </Link>
+      ) : (
+        <span>{info.country ? `Général · ${info.country}` : "Général"}</span>
+      )}
+    </p>
+  );
+}
 
-      {info.superseded_by ? (
-        <Badge tone="bad"><Archive className="h-3 w-3" /> Remplacée</Badge>
-      ) : info.status === "archived" ? (
-        <Badge tone="bad"><Archive className="h-3 w-3" /> Archivée</Badge>
-      ) : info.status === "rejected" ? (
-        <Badge tone="bad"><Ban className="h-3 w-3" /> Rejetée</Badge>
-      ) : null}
+export function DocSignals({ info, conflicts = 0 }: { info: InfoWithRelations; conflicts?: number }) {
+  const signals: { key: string; icon: typeof BadgeCheck; label: string; tone: "good" | "bad" }[] = [];
+  if (info.is_official) signals.push({ key: "official", icon: BadgeCheck, label: "Document officiel", tone: "good" });
+  if (info.is_signed) signals.push({ key: "signed", icon: PenLine, label: "Signé", tone: "good" });
+  if (conflicts > 0) signals.push({ key: "conflict", icon: AlertTriangle, label: `${conflicts} contradiction(s)`, tone: "bad" });
+  if (!info.owner) signals.push({ key: "owner", icon: UserX, label: "Personne ne la maintient", tone: "bad" });
+  if (info.superseded_by) signals.push({ key: "sup", icon: Archive, label: "Remplacée", tone: "bad" });
+  else if (info.status === "archived") signals.push({ key: "arch", icon: Archive, label: "Archivée", tone: "bad" });
+  if (info.status === "rejected") signals.push({ key: "rej", icon: Ban, label: "Rejetée", tone: "bad" });
+  if (isExpired(info)) signals.push({ key: "exp", icon: CalendarX, label: `Expirée le ${formatDate(info.valid_until)}`, tone: "bad" });
+
+  if (signals.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {signals.map(({ key, icon: Icon, label, tone }) => (
+        <span
+          key={key}
+          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ${
+            tone === "good" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+          }`}
+        >
+          <Icon className="h-3 w-3" /> {label}
+        </span>
+      ))}
     </div>
   );
+}
+
+function Dot() {
+  return <span className="text-slate-300">·</span>;
 }

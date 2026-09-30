@@ -3,13 +3,9 @@ import { computeTrust, extractFacts, highlightDisagreement } from "@/lib/trust";
 import type { InfoWithRelations } from "@/lib/types";
 import { SubmitButton } from "./submit-button";
 import { TrustPills } from "./trust-pills";
+import { ScoreBadge } from "./trust-score";
 import { formatDate } from "./ui";
 
-const SCORE_TONE = {
-  high: "bg-emerald-50 text-emerald-700",
-  medium: "bg-amber-50 text-amber-700",
-  low: "bg-red-50 text-red-700",
-} as const;
 
 /**
  * Toutes les versions d'un même sujet qui se contredisent, côte à côte.
@@ -74,9 +70,7 @@ export function VersionChooser({
                     <CheckCircle2 className="h-3.5 w-3.5" /> Retenue
                   </span>
                 ) : (
-                  <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-sm font-semibold tabular-nums ${SCORE_TONE[trust.level]}`}>
-                    {trust.score}
-                  </span>
+                  <ScoreBadge trust={trust} />
                 )}
               </div>
               <p className="flex-1 px-5 py-4 leading-relaxed text-slate-800">
