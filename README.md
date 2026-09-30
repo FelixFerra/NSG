@@ -69,7 +69,54 @@ N'importe quel employé connecté peut trancher, en choisissant **la bonne versi
 - prévient chaque auteur que sa version a été retenue ou non ;
 - ajoute **+1** au score d'expertise de la personne qui a tranché, sur ce sujet.
 
-### 5. Le score d'expertise
+### 5. Prochaine étape : une détection logique des contradictions
+
+**Ce qu'on a aujourd'hui est déjà une première version d'un raisonnement logique.** Le trigger `detect_info_conflicts` est une **règle de déni**, au sens de Datalog : « deux faits actifs, sur le même sujet et le même périmètre, avec des valeurs différentes, ne peuvent pas coexister ». Les faits sont extraits du texte par une expression régulière, qui ne capte que les nombres suivis d'une unité.
+
+Cette version a deux limites connues :
+- **Des faux positifs.** Dans « 28 jours de congés, minimum légal 20 jours sur 5 jours/semaine », la phrase contient trois chiffres qui ne portent pas sur la même chose. Pourtant, ils sont comparés comme s'ils l'étaient.
+- **Des contradictions sans chiffres qu'on ne voit pas.** « Pas d'indexation automatique en France » contre « indexation de 2 % en France » n'est pas détecté.
+
+Le problème n'est pas le raisonnement, mais **l'extraction**. Un solveur logique (SMT, Datalog, OWL) ne lit pas un mail : il raisonne sur des règles déjà structurées. On garde donc le même principe, en séparant proprement les deux étapes.
+
+```
+ Document (texte)
+      │  1. EXTRACTION : LLM contraint à un schéma fixe, résultat visible et corrigeable
+      ▼
+ Règle structurée
+   { sujet: "conges", client: "Lambert", pays: "BE",
+     population: { contrat: "CDI", anciennete: [5, ∞[ },
+     periode: [2026-01-01, 2026-12-31],
+     attribut: "jours_conges_annuels", valeur: 24, unite: "jours" }
+      │  2. RAISONNEMENT : déterministe, pas d'IA
+      ▼
+ Conflit si : même attribut ∧ conditions qui se chevauchent ∧ valeurs incompatibles
+      │  3. EXPLICATION
+      ▼
+ « Pour les CDI de 5 à 8 ans d'ancienneté chez Brasserie Lambert en 2026 :
+   24 jours (Teams, Lucas) contre 20 jours (Outlook, Félix) »
+```
+
+1. **Extraction structurée.** Un LLM (par exemple Claude) traduit chaque document dans un schéma fixe : sujet, périmètre, population concernée, période, attribut, valeur. Le résultat est **affiché à côté du texte et corrigeable par l'auteur**. On garde ainsi la transparence : l'IA propose, l'humain valide.
+2. **Raisonnement déterministe.** Deux règles se contredisent si elles portent sur le **même attribut** (`jours_conges_annuels`, `indexation_automatique`…), si leurs **conditions se chevauchent** (intersection non vide des intervalles d'ancienneté, des périodes, des clients et des pays) et si leurs **valeurs sont incompatibles**. Pour des conditions simples, un calcul d'intersection d'intervalles suffit. Pour des conditions composées (ET/OU imbriqués, exceptions), on peut confier la vérification à un **solveur SMT comme Z3**. Son *unsat core* désigne exactement les règles qui s'excluent.
+3. **Explication.** Le cas précis qui pose problème est montré à l'utilisateur : population, période, valeurs et sources. C'est l'équivalent lisible de l'unsat core.
+
+Ce que cela apporte :
+- **Plus de faux positifs** : seuls les chiffres qui portent sur le même attribut sont comparés.
+- **Détection des contradictions sans chiffres** : par exemple `indexation_automatique = faux` contre `vrai`.
+- **Des conflits partiels** : « 2 jours après 5 ans » et « 1 jour entre 3 et 8 ans » ne se contredisent que pour les salariés de 5 à 8 ans d'ancienneté. Le système le dit précisément au lieu de tout marquer en conflit.
+- **Le reste de l'appli ne change pas** : groupes de conflits, validation par les pairs, choix de la bonne version, score d'expertise.
+
+Les autres pistes étudiées et pourquoi on ne les retient pas en premier :
+
+| Approche | Pour nous | Pourquoi |
+| --- | --- | --- |
+| **SMT (Z3)** | Oui, pour les conditions composées | Idéal pour les chevauchements de conditions et les valeurs numériques |
+| **Datalog** | Oui, c'est déjà le principe | Règles d'intégrité comme « un seul statut fiscal actif par période » ; notre trigger SQL en est une version simple |
+| **Tables de décision** | Utile comme représentation | Très lisible pour la paie ; la détection se fait en comparant les lignes deux à deux (Quine-McCluskey sert à simplifier, pas à détecter) |
+| **Ontologie OWL** | Plus tard | Bonne pour les classifications disjointes (avantage en nature ou frais professionnel), faible sur les valeurs numériques, lourde à modéliser |
+
+### 6. Le score d'expertise
 
 - Chaque employé a un score **par sujet**. Trancher un conflit ou répondre à une question transférée rapporte **+1** sur le sujet concerné.
 - Les niveaux sont : **Référent** à partir de 10 points, **Confirmé** à partir de 5, **Contributeur** à partir de 1.
@@ -133,5 +180,5 @@ Next.js 16 (App Router, Server Actions), Tailwind CSS 4, Supabase (Postgres, Aut
 
 - **Connecteurs** : ils n'appellent pas encore les vraies API (Microsoft Graph, Google, Slack). Les infos viennent du seed ou d'une saisie manuelle. Les métadonnées « officiel » et « signé » devraient être extraites à l'import.
 - **Compréhension des questions** : elle repose sur des mots-clés, sans modèle de langage. L'étape suivante est une recherche sémantique (embeddings) et une réponse rédigée par un LLM, citant ses sources.
-- **Détection des contradictions** : elle ne compare que les faits chiffrés (%, jours, €, mois). Deux textes qui se contredisent sans chiffres ne sont pas détectés, et des chiffres différents qui disent la même chose (2,5 jours par mois et 30 jours par an) créent un faux conflit. Un LLM pourrait servir de second filtre.
+- **Détection des contradictions** : elle ne compare que les faits chiffrés (%, jours, €, mois). Deux textes qui se contredisent sans chiffres ne sont pas détectés, et des chiffres qui ne portent pas sur la même chose peuvent créer un faux conflit. La solution (extraction structurée puis raisonnement logique sur le chevauchement des conditions) est décrite dans « Prochaine étape : une détection logique des contradictions ».
 - **Notifications** : elles restent dans l'appli, sans envoi par e-mail ni dans Teams.
