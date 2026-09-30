@@ -3,9 +3,16 @@ import { AlertTriangle, Plus, Search } from "lucide-react";
 import { getCurrentEmployee } from "@/lib/supabase/server";
 import { buildConflictIndex, fetchConflicts, fetchInfos, fetchReferenceData } from "@/lib/data";
 import { computeTrust } from "@/lib/trust";
-import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { sourceName } from "@/lib/connectors";
+import { EmptyState, PageHeader, formatDate } from "@/components/ui";
 import { TrustPills } from "@/components/trust-pills";
-import { TrustFactors, TrustScore } from "@/components/trust-score";
+import { TrustFactors } from "@/components/trust-score";
+
+const SCORE_TONE = {
+  high: "bg-emerald-50 text-emerald-700",
+  medium: "bg-amber-50 text-amber-700",
+  low: "bg-red-50 text-red-700",
+} as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -85,41 +92,84 @@ export default async function KnowledgePage(props: PageProps<"/knowledge">) {
       {results.length === 0 ? (
         <EmptyState>Aucune info. Connecte des sources ou ajoute une info.</EmptyState>
       ) : (
-        <div className="space-y-4">
-          {results.map(({ info, trust, conflicts: infoConflicts }) => (
-            <Card key={info.id}>
-              <div className="flex gap-5">
-                <TrustScore trust={trust} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-medium">{info.title}</h2>
-                    {info.context && <Badge tone="info">{info.context.label}</Badge>}
-                  </div>
-                  <p className="mt-2 text-sm text-slate-700">{info.content}</p>
-                  <div className="mt-3">
-                    <TrustPills info={info} />
-                  </div>
-                  {infoConflicts.length > 0 && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-red-700">
-                      <AlertTriangle className="h-4 w-4" />
-                      Contredite par :
-                      {infoConflicts.map(({ conflict, other }) => (
-                        <Link key={conflict.id} href={`/conflicts/${conflict.id}`} className="font-medium underline">
-                          {other.title}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                  <details className="mt-3 rounded-lg bg-slate-50 p-3">
-                    <summary className="cursor-pointer text-sm font-medium text-slate-700">Pourquoi ce score ?</summary>
-                    <div className="mt-3">
-                      <TrustFactors trust={trust} />
-                    </div>
-                  </details>
-                </div>
-              </div>
-            </Card>
-          ))}
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
+              <tr>
+                <th className="w-16 px-4 py-2.5 text-center">Score</th>
+                <th className="px-4 py-2.5">Document</th>
+                <th className="hidden px-4 py-2.5 lg:table-cell">Sujet</th>
+                <th className="hidden px-4 py-2.5 md:table-cell">Périmètre</th>
+                <th className="hidden px-4 py-2.5 xl:table-cell">Source</th>
+                <th className="hidden px-4 py-2.5 lg:table-cell">Auteur</th>
+                <th className="hidden px-4 py-2.5 sm:table-cell">Mis à jour</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {results.map(({ info, trust, conflicts: infoConflicts }) => {
+                const inactive = info.status !== "active" || !!info.superseded_by;
+                return (
+                  <tr key={info.id} className={`align-top ${inactive ? "text-slate-400" : ""}`}>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-block min-w-10 rounded-md px-1.5 py-0.5 text-sm font-semibold tabular-nums ${SCORE_TONE[trust.level]}`}>
+                        {trust.score}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <details className="group">
+                        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                          <span className={`font-medium group-open:text-indigo-700 ${inactive ? "line-through decoration-slate-300" : "text-slate-900"}`}>
+                            {info.title}
+                          </span>
+                          {infoConflicts.length > 0 && (
+                            <span className="ml-2 inline-flex items-center gap-1 align-middle text-xs font-medium text-red-600">
+                              <AlertTriangle className="h-3.5 w-3.5" /> {infoConflicts.length} conflit(s)
+                            </span>
+                          )}
+                          <span className="block truncate text-xs text-slate-500 group-open:hidden">{info.content}</span>
+                        </summary>
+                        <div className="mt-3 space-y-3 rounded-lg bg-slate-50 p-3">
+                          <p className="text-slate-700">{info.content}</p>
+                          <TrustPills info={info} />
+                          {infoConflicts.length > 0 && (
+                            <p className="flex flex-wrap items-center gap-2 text-red-700">
+                              Contredite par :
+                              {infoConflicts.map(({ conflict, other }) => (
+                                <Link key={conflict.id} href={`/conflicts/${conflict.id}`} className="font-medium underline">
+                                  {other.title}
+                                </Link>
+                              ))}
+                            </p>
+                          )}
+                          <div>
+                            <p className="mb-2 text-xs font-medium text-slate-500 uppercase">Pourquoi {trust.score}/100</p>
+                            <TrustFactors trust={trust} />
+                          </div>
+                        </div>
+                      </details>
+                    </td>
+                    <td className="hidden px-4 py-3 whitespace-nowrap lg:table-cell">{info.context?.label ?? "—"}</td>
+                    <td className="hidden px-4 py-3 whitespace-nowrap md:table-cell">
+                      {info.client ? (
+                        <Link href={`/clients/${info.client.id}`} className="hover:text-indigo-700 hover:underline">{info.client.name}</Link>
+                      ) : (
+                        info.country ?? "—"
+                      )}
+                    </td>
+                    <td className="hidden px-4 py-3 whitespace-nowrap xl:table-cell">{sourceName(info.source_type)}</td>
+                    <td className="hidden px-4 py-3 whitespace-nowrap lg:table-cell">
+                      {info.owner ? (
+                        <Link href={`/team/${info.owner.id}`} className="hover:text-indigo-700 hover:underline">{info.owner.full_name}</Link>
+                      ) : (
+                        <span className="text-red-500">Sans auteur</span>
+                      )}
+                    </td>
+                    <td className="hidden px-4 py-3 whitespace-nowrap sm:table-cell">{formatDate(info.source_updated_at)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </>
