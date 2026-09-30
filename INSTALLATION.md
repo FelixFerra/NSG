@@ -1,5 +1,7 @@
 # Installation et démo
 
+**Démo en ligne : [nsgtest.vercel.app](https://nsgtest.vercel.app/)** — crée un compte pour y accéder. Le scénario ci-dessous fonctionne aussi sur la démo en ligne.
+
 ## Lancer le projet
 
 1. Créer un projet sur [supabase.com](https://supabase.com).

@@ -6,6 +6,8 @@ Un consultant paie doit répondre vite à un client. Sa recherche remonte plusie
 
 **SD Worx Data Trust ne se contente pas de trouver l'information : il montre pourquoi on peut s'y fier ou non, signale les contradictions au lieu de les cacher, et fait trancher les humains qui savent.** Rien n'est une boîte noire : chaque point du score de confiance est expliqué à l'écran.
 
+> **Démo en ligne : [nsgtest.vercel.app](https://nsgtest.vercel.app/)** — crée un compte pour y accéder (données de démonstration fictives).
+>
 > Installation, scénario de démo et déploiement : voir [INSTALLATION.md](INSTALLATION.md).
 
 ---
